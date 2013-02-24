@@ -190,4 +190,62 @@ class Ranker {
 		Document d = _index.getDoc(did);
 		return new ScoredDocument(did, d.get_title_string(), d.get_numviews());
 	}
+
+
+	public ScoredDocument queryLikelihood(String query, int did) {
+		Scanner s = new Scanner(query);
+		Vector<String> qv = new Vector<String>();
+		while (s.hasNext()) {
+			String term = s.next();
+			qv.add(term);
+		}
+		// Get the document vector. For hw1, you don't have to worry about the
+		// details of how index works.
+		Document d = _index.getDoc(did);
+		Vector<String> dv = d.get_body_vector();
+		double score = 0;
+		Vector<Double> queryRepresentation = new Vector<Double>();
+		Map<String, Integer> docFrequencyMap = returnDocumentFrequencyMap(dv);
+		Set<String> termSet = new HashSet<String>();
+		double numOfWordsDoc = (double)findNumOfWords(docFrequencyMap);
+		double numOfWordsColl = (double)Document.termFrequency();
+		double lambda = 0.5;
+		double f_qi, c_qi;
+
+		// Create Representation for query. ///
+		// ///////////////////////////////////////////////////////////////////////
+		for (String title : qv) {
+			if (termSet.add(title)) {
+				if (docFrequencyMap.containsKey(title)) {
+					f_qi = (double)docFrequencyMap.get(title);
+				} else {
+					f_qi = 0;
+				}
+				double f_qi_d = (1 - lambda) * (f_qi / numOfWordsDoc);
+				c_qi = Document.termFrequency(title);
+				double c_qi_d = lambda * (c_qi / numOfWordsColl);
+				queryRepresentation.add(f_qi_d + c_qi_d);
+			}
+		}
+
+		// Query Likelihood ///
+		//////////////////////////////////////////////////////////////////////////
+		for (int i = 0; i < queryRepresentation.size(); i++) { 
+			score += Math.log(queryRepresentation.get(i))/Math.log(2.0) ;
+		}
+		score = Math.pow(score, 2);
+
+		return new ScoredDocument(did, d.get_title_string(), score);
+	}
+
+	private int findNumOfWords(Map<String, Integer> mp) {
+		int count = 0;
+		Iterator<Entry<String, Integer>> it = mp.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry pairs = (Map.Entry) it.next();
+			count = count + (Integer) pairs.getValue();
+		}
+		return count;
+	}
+
 }
