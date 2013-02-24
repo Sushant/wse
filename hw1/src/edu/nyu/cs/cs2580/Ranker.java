@@ -18,13 +18,27 @@ class Ranker {
 	public Vector<ScoredDocument> runquery(String query) {
 		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
 		for (int i = 0; i < _index.numDocs(); ++i) {
-			//retrieval_results.add(runquery(query, i));
-			//retrieval_results.add(cosineRanker(query, i));
-			retrieval_results.add(phraseRanker(query, i));
+			retrieval_results.add(runquery(query, i));
+		}
+		return retrieval_results;
+	}
+	
+	public Vector<ScoredDocument> cosineRanker(String query) {
+		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
+		for (int i = 0; i < _index.numDocs(); ++i) {
+			retrieval_results.add(cosineRanker(query, i));
 		}
 		return retrieval_results;
 	}
 
+	public Vector<ScoredDocument> phraseRanker(String query) {
+		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
+		for (int i = 0; i < _index.numDocs(); ++i) {
+			retrieval_results.add(phraseRanker(query, i));
+		}
+		return retrieval_results;
+	}
+	
 	public ScoredDocument runquery(String query, int did) {
 
 		// Build query vector

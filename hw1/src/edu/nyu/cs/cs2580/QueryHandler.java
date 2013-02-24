@@ -65,12 +65,15 @@ class QueryHandler implements HttpHandler {
         if (keys.contains("query")){
           if (keys.contains("ranker")){
             String ranker_type = query_map.get("ranker");
+            String queryStr = query_map.get("query");
             if (ranker_type.equals("cosine")){
-              queryResponse = (ranker_type + " not implemented.");
+            	Vector < ScoredDocument > sds = _ranker.cosineRanker(queryStr);
+            	queryResponse = generate_text_response(sds, queryStr);
             } else if (ranker_type.equals("QL")){
               queryResponse = (ranker_type + " not implemented.");
             } else if (ranker_type.equals("phrase")){
-              queryResponse = (ranker_type + " not implemented.");
+            	Vector < ScoredDocument > sds = _ranker.phraseRanker(queryStr);
+            	queryResponse = generate_text_response(sds, queryStr);
             } else if (ranker_type.equals("linear")){
               queryResponse = (ranker_type + " not implemented.");
             } else {
