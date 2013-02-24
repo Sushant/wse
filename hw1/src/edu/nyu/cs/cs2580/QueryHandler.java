@@ -15,8 +15,6 @@ import java.util.Iterator;
 import java.util.Vector;
 
 class QueryHandler implements HttpHandler {
-  private static String plainResponse =
-      "Request received, but I am not smart enough to echo yet!\n";
 
   private Ranker _ranker;
 
@@ -76,6 +74,9 @@ class QueryHandler implements HttpHandler {
             	queryResponse = generate_text_response(sds, queryStr);
             } else if (ranker_type.equals("linear")){
               queryResponse = (ranker_type + " not implemented.");
+            } else if (ranker_type.equals("numviews")){
+            	Vector < ScoredDocument > sds = _ranker.numviewsRanker(queryStr);
+            	queryResponse = generate_text_response(sds, queryStr);
             } else {
               queryResponse = (ranker_type+" not implemented.");
             }

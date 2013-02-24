@@ -4,7 +4,6 @@ import java.util.Vector;
 import java.util.Scanner;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 
 
 // @CS2580: This is a simple implementation that you will be changing
@@ -88,7 +87,7 @@ class Document {
 
   
   public int getTermFrequency(String term) {
-	  return (getTermFrequencyInVector(term, getTermVector(_title)) + getTermFrequencyInVector(term, getTermVector(_body))); 
+	  return getTermFrequencyInVector(term, getTermVector(_body)); 
   }
   
   
@@ -103,7 +102,7 @@ class Document {
   }
   
   public int getPhraseFrequency(String phrase) {
-	  return (getPhraseFrequencyInVector(phrase, getTermVector(_title)) + getPhraseFrequencyInVector(phrase, getTermVector(_body))); 
+	  return getPhraseFrequencyInVector(phrase, getTermVector(_body)); 
   }
   
   

@@ -39,6 +39,14 @@ class Ranker {
 		return retrieval_results;
 	}
 	
+	public Vector<ScoredDocument> numviewsRanker(String query) {
+		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
+		for (int i = 0; i < _index.numDocs(); ++i) {
+			retrieval_results.add(numviewsRanker(query, i));
+		}
+		return retrieval_results;
+	}
+	
 	public ScoredDocument runquery(String query, int did) {
 
 		// Build query vector
@@ -72,9 +80,8 @@ class Ranker {
 		// Get the document vector. For hw1, you don't have to worry about the
 		// details of how index works.
 		Document d = _index.getDoc(did);
-		Vector<String> dv = d.get_title_vector();
+		Vector<String> dv = d.get_body_vector();
 		double score = 0;
-		dv.addAll(d.get_body_vector());
 		Vector<Double> docRepresentation = new Vector<Double>();
 		Vector<Double> queryRepresentation = new Vector<Double>();
 		Map<String, Integer> docFrequencyMap = returnDocumentFrequencyMap(dv);
@@ -177,5 +184,10 @@ class Ranker {
 			}
 		}
 		return new ScoredDocument(did, d.get_title_string(), score);
+	}
+	
+	public ScoredDocument numviewsRanker(String query, int did) {
+		Document d = _index.getDoc(did);
+		return new ScoredDocument(did, d.get_title_string(), d.get_numviews());
 	}
 }
