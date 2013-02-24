@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
+
 // @CS2580: This is a simple implementation that you will be changing
 // in homework 2.  For this homework, don't worry about how this is done.
 class Document {
@@ -19,6 +20,7 @@ class Document {
   
   private Vector < Integer > _body;
   private Vector < Integer > _title;
+  private Vector < Pair<Integer, Integer> > _phrase;
   private String _titleString;
   private int _numviews;
   
@@ -43,7 +45,6 @@ class Document {
 
     readTermVector(_titleString, _title);
     readTermVector(s.next(), _body);
-    
     HashSet < Integer > unique_terms = new HashSet < Integer >();
     for (int i = 0; i < _title.size(); ++i){
       int idx = _title.get(i);
@@ -82,9 +83,47 @@ class Document {
   }
 
   public Vector < String > get_body_vector(){
-    return getTermVector(_body);
+     return getTermVector(_body);  
   }
 
+  
+  public int getTermFrequency(String term) {
+	  return (getTermFrequencyInVector(term, getTermVector(_title)) + getTermFrequencyInVector(term, getTermVector(_body))); 
+  }
+  
+  
+  private int getTermFrequencyInVector(String queryString, Vector < String > tv){
+	  int frequency = 0;
+	  for (String docString: tv) {
+		  if (queryString.equals(docString)) {
+			  frequency += 1;
+		  }
+	  }
+	  return frequency;
+  }
+  
+  public int getPhraseFrequency(String phrase) {
+	  return (getPhraseFrequencyInVector(phrase, getTermVector(_title)) + getPhraseFrequencyInVector(phrase, getTermVector(_body))); 
+  }
+  
+  
+  private int getPhraseFrequencyInVector(String queryPhrase, Vector < String > tv){
+	  int frequency = 0;
+	  for (int i = 0; i < tv.size() - 1; i++) {
+		  StringBuffer docPhrase = new StringBuffer(tv.get(i)).append(" ").append(tv.get(i + 1));
+		  if (queryPhrase.equals(docPhrase.toString())) {
+			  frequency += 1;
+		  }
+	  }
+	  return frequency;
+  }
+  
+  public Vector < String > get_phrase_vector(){
+	  _phrase = new Vector < Pair < Integer, Integer> >();
+	  readPhraseVector(_title, _phrase);
+	  return getPhraseVector(_phrase);
+  }
+  
   private Vector < String > getTermVector(Vector < Integer > tv){
     Vector < String > retval = new Vector < String >();
     for (int idx : tv){
@@ -92,6 +131,16 @@ class Document {
     }
     return retval;
   }
+  
+  private Vector < String > getPhraseVector(Vector< Pair<Integer, Integer> > pv){
+	  Vector < String > retval = new Vector < String >();
+	    for (Pair <Integer, Integer> p_idx: pv){
+	      StringBuffer phrase = new StringBuffer(_rdictionary.get(p_idx.getL())).append(" ").append(_rdictionary.get(p_idx.getR()));
+	      retval.add(phrase.toString());
+	    }
+	    return retval;
+  }
+   
 
   private void readTermVector(String raw,Vector < Integer > tv){
     Scanner s = new Scanner(raw);
@@ -111,4 +160,15 @@ class Document {
     }
     return;
   }
+  
+  private void readPhraseVector(Vector < Integer > tv, Vector < Pair < Integer, Integer> > pv){
+	  if (tv.size() >= 2) {
+		  for (int i = 0; i < tv.size() - 1; i++) {
+			  Pair < Integer, Integer > p =  new Pair<Integer, Integer>(tv.get(i), tv.get(i + 1));
+			  pv.add(p);
+		  }  
+	  }
+	  return;
+  }
+ 
 }

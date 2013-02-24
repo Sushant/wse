@@ -2,6 +2,9 @@ package edu.nyu.cs.cs2580;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -27,7 +30,12 @@ class QueryHandler implements HttpHandler {
     for (String param : params){  
       String name = param.split("=")[0];  
       String value = param.split("=")[1];  
-      map.put(name, value);  
+      try {
+		map.put(name, URLDecoder.decode(value, "UTF-8"));
+	} catch (UnsupportedEncodingException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}  
     }
     return map;  
   } 

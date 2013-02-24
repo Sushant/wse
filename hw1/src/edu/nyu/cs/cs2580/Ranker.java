@@ -19,7 +19,8 @@ class Ranker {
 		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
 		for (int i = 0; i < _index.numDocs(); ++i) {
 			//retrieval_results.add(runquery(query, i));
-			retrieval_results.add(cosineRanker(query, i));
+			//retrieval_results.add(cosineRanker(query, i));
+			retrieval_results.add(phraseRanker(query, i));
 		}
 		return retrieval_results;
 	}
@@ -27,12 +28,7 @@ class Ranker {
 	public ScoredDocument runquery(String query, int did) {
 
 		// Build query vector
-		Scanner s = new Scanner(query);
-		Vector<String> qv = new Vector<String>();
-		while (s.hasNext()) {
-			String term = s.next();
-			qv.add(term);
-		}
+		Vector<String> qv = buildQueryVector(query);
 
 		// Get the document vector. For hw1, you don't have to worry about the
 		// details of how index works.
@@ -57,12 +53,7 @@ class Ranker {
 	}
 
 	public ScoredDocument cosineRanker(String query, int did) {
-		Scanner s = new Scanner(query);
-		Vector<String> qv = new Vector<String>();
-		while (s.hasNext()) {
-			String term = s.next();
-			qv.add(term);
-		}
+		Vector<String> qv = buildQueryVector(query);
 
 		// Get the document vector. For hw1, you don't have to worry about the
 		// details of how index works.
@@ -145,6 +136,32 @@ class Ranker {
 			}
 		}
 		return frequencyMap;
-
+	}
+	
+	
+	private Vector < String > buildQueryVector(String query) {
+		Scanner s = new Scanner(query);
+		Vector<String> qv = new Vector<String>();
+		while (s.hasNext()) {
+			String term = s.next();
+			qv.add(term);
+		}
+		return qv;
+	}
+	
+	public ScoredDocument phraseRanker(String query, int did){
+		String queryStr = query + "\t" + query + "\t" + "-1";
+		Document queryDocument = new Document(-1, queryStr);
+		Vector < String > qpv = queryDocument.get_phrase_vector();
+		Document d = _index.getDoc(did);
+		int score = 0;
+		if (qpv.size() == 0 && query.length() > 0) {
+			score += d.getTermFrequency(query);
+		} else {
+			for (String s: qpv) {
+				score += d.getPhraseFrequency(s);
+			}
+		}
+		return new ScoredDocument(did, d.get_title_string(), score);
 	}
 }
