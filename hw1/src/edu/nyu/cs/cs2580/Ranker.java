@@ -8,6 +8,8 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Collections;
+import java.util.Comparator;
 
 class Ranker {
 	private Index _index;
@@ -22,7 +24,7 @@ class Ranker {
 		for (int i = 0; i < _index.numDocs(); ++i) {
 			retrieval_results.add(runquery(query, i));
 		}
-		return retrieval_results;
+		return getSorted(retrieval_results);
 	}
 	
 	public Vector<ScoredDocument> cosineRanker(String query) {
@@ -30,15 +32,15 @@ class Ranker {
 		for (int i = 0; i < _index.numDocs(); ++i) {
 			retrieval_results.add(cosineRanker(query, i));
 		}
-		return retrieval_results;
+		return getSorted(retrieval_results);
 	}
 
-	public Vector<ScoredDocument> phraseRanker(String query) {
+	public Vector<ScoredDocument> queryLikelihoodRanker(String query) {
 		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
 		for (int i = 0; i < _index.numDocs(); ++i) {
-			retrieval_results.add(phraseRanker(query, i));
+			retrieval_results.add(queryLikelihoodRanker(query, i));
 		}
-		return retrieval_results;
+		return getSorted(retrieval_results);
 	}
 	
 	public Vector<ScoredDocument> numviewsRanker(String query) {
@@ -46,7 +48,15 @@ class Ranker {
 		for (int i = 0; i < _index.numDocs(); ++i) {
 			retrieval_results.add(numviewsRanker(query, i));
 		}
-		return retrieval_results;
+		return getSorted(retrieval_results);
+	}
+	
+	public Vector<ScoredDocument> phraseRanker(String query) {
+		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
+		for (int i = 0; i < _index.numDocs(); ++i) {
+			retrieval_results.add(phraseRanker(query, i));
+		}
+		return getSorted(retrieval_results);
 	}
 	
 	public ScoredDocument runquery(String query, int did) {
@@ -194,7 +204,7 @@ class Ranker {
 	}
 
 
-	public ScoredDocument queryLikelihood(String query, int did) {
+	public ScoredDocument queryLikelihoodRanker(String query, int did) {
 		Scanner s = new Scanner(query);
 		Vector<String> qv = new Vector<String>();
 		while (s.hasNext()) {
@@ -223,9 +233,15 @@ class Ranker {
 				} else {
 					f_qi = 0;
 				}
-				double f_qi_d = (1 - lambda) * (f_qi / numOfWordsDoc);
+				double f_qi_d = 0;
+				if (numOfWordsDoc != 0) {
+					f_qi_d = (1 - lambda) * (f_qi / numOfWordsDoc);
+				}
 				c_qi = Document.termFrequency(title);
-				double c_qi_d = lambda * (c_qi / numOfWordsColl);
+				double c_qi_d = 0;
+				if (numOfWordsColl != 0) {
+					c_qi_d = lambda * (c_qi / numOfWordsColl);
+				}
 				queryRepresentation.add(f_qi_d + c_qi_d);
 			}
 		}
@@ -235,7 +251,7 @@ class Ranker {
 		for (int i = 0; i < queryRepresentation.size(); i++) { 
 			score += Math.log(queryRepresentation.get(i))/Math.log(2.0) ;
 		}
-		score = Math.pow(score, 2);
+		//score = Math.pow(score, 2);
 
 		return new ScoredDocument(did, d.get_title_string(), score);
 	}
@@ -250,4 +266,15 @@ class Ranker {
 		return count;
 	}
 
+	public Vector<ScoredDocument> getSorted(Vector<ScoredDocument> doc) {
+		Comparator<ScoredDocument> comparator = new Comparator<ScoredDocument>() {
+			public int compare(ScoredDocument c1, ScoredDocument c2) {
+				Double d1= (c1 == null) ? Double.POSITIVE_INFINITY : c1._score;
+				Double d2= (c2 == null) ? Double.POSITIVE_INFINITY : c2._score;
+				return  d2.compareTo(d1);
+			}
+		};
+		Collections.sort(doc,comparator);
+		return doc;
+	}
 }

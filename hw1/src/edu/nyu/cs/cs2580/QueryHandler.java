@@ -17,6 +17,7 @@ import java.util.Vector;
 class QueryHandler implements HttpHandler {
 
   private Ranker _ranker;
+  private Vector < ScoredDocument > sds;
 
   public QueryHandler(Ranker ranker){
     _ranker = ranker;
@@ -54,53 +55,49 @@ class QueryHandler implements HttpHandler {
   
     String uriQuery = exchange.getRequestURI().getQuery();
     String uriPath = exchange.getRequestURI().getPath();
-    String queryResponse = "";
 
     if ((uriPath != null) && (uriQuery != null)){
       if (uriPath.equals("/search")){
         Map<String,String> query_map = getQueryMap(uriQuery);
         Set<String> keys = query_map.keySet();
         if (keys.contains("query")){
+          String queryStr = query_map.get("query");
           if (keys.contains("ranker")){
             String ranker_type = query_map.get("ranker");
-            String queryStr = query_map.get("query");
             if (ranker_type.equals("cosine")){
-            	Vector < ScoredDocument > sds = _ranker.cosineRanker(queryStr);
-            	queryResponse = generate_text_response(sds, queryStr);
+            	sds = _ranker.cosineRanker(queryStr);
             } else if (ranker_type.equals("QL")){
-              queryResponse = (ranker_type + " not implemented.");
+            	sds = _ranker.queryLikelihoodRanker(queryStr);
             } else if (ranker_type.equals("phrase")){
-            	Vector < ScoredDocument > sds = _ranker.phraseRanker(queryStr);
-            	queryResponse = generate_text_response(sds, queryStr);
+            	sds = _ranker.phraseRanker(queryStr);
             } else if (ranker_type.equals("linear")){
-              queryResponse = (ranker_type + " not implemented.");
+            	sds = new Vector < ScoredDocument >();
             } else if (ranker_type.equals("numviews")){
-            	Vector < ScoredDocument > sds = _ranker.numviewsRanker(queryStr);
-            	queryResponse = generate_text_response(sds, queryStr);
+            	sds = _ranker.numviewsRanker(queryStr);
             } else {
-              queryResponse = (ranker_type+" not implemented.");
+              sds = new Vector < ScoredDocument >();
             }
           } else {
             // @CS2580: The following is instructor's simple ranker that does not
             // use the Ranker class.
-            Vector < ScoredDocument > sds = _ranker.runquery(query_map.get("query"));
-            queryResponse = generate_text_response(sds, query_map.get("query"));
+            sds = _ranker.runquery(query_map.get("query"));
           }
+          if (keys.contains("format")) {
+        	  if (query_map.get("format").equals("html")) {
+        		  send_html_response(sds, queryStr, exchange);
+        		  return;
+        	  }
+          }
+          send_text_response(sds, queryStr, exchange);
         }
       }
     }
     
     
-      // Construct a simple response.
-      Headers responseHeaders = exchange.getResponseHeaders();
-      responseHeaders.set("Content-Type", "text/plain");
-      exchange.sendResponseHeaders(200, 0);  // arbitrary number of bytes
-      OutputStream responseBody = exchange.getResponseBody();
-      responseBody.write(queryResponse.getBytes());
-      responseBody.close();
+      
   }
   
-  private static String generate_text_response(Vector < ScoredDocument > sds, String query) {
+  private static void send_text_response(Vector < ScoredDocument > sds, String query, HttpExchange exchange) throws IOException {
   	String queryResponse = "";
   	Iterator < ScoredDocument > itr = sds.iterator();
       while (itr.hasNext()){
@@ -113,6 +110,37 @@ class QueryHandler implements HttpHandler {
       if (queryResponse.length() > 0){
         queryResponse = queryResponse + "\n";
       }
-      return queryResponse;
+
+      Headers responseHeaders = exchange.getResponseHeaders();
+      responseHeaders.set("Content-Type", "text/plain");
+      exchange.sendResponseHeaders(200, 0);  // arbitrary number of bytes
+      OutputStream responseBody = exchange.getResponseBody();
+      responseBody.write(queryResponse.getBytes());
+      responseBody.close();
   }
+  
+  private static void send_html_response(Vector < ScoredDocument > sds, String query, HttpExchange exchange) throws IOException {
+	  	String queryResponse = "<!DOCTYPE html><html><head><title>#include Search</title><body>";
+	  	queryResponse += "<p>Search Results for: <i><em>" + query + "</em></i></p>";
+	  	Iterator < ScoredDocument > itr = sds.iterator();
+	  	//int idx = 1;
+	      while (itr.hasNext()){
+	        ScoredDocument sd = itr.next();
+	        if (queryResponse.length() > 0){
+	          queryResponse = queryResponse + "<br />";
+	        }
+	        queryResponse = queryResponse + "<li>" + sd.asString() + "</li>";
+	      }
+	      if (queryResponse.length() > 0){
+	        queryResponse = queryResponse + "<br />";
+	      }
+	      queryResponse += "</body></html>";
+	      
+	      Headers responseHeaders = exchange.getResponseHeaders();
+	      responseHeaders.set("Content-Type", "text/html");
+	      exchange.sendResponseHeaders(200, 0);  // arbitrary number of bytes
+	      OutputStream responseBody = exchange.getResponseBody();
+	      responseBody.write(queryResponse.getBytes());
+	      responseBody.close();
+	  }
 }
