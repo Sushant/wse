@@ -45,9 +45,10 @@ class QueryHandler implements HttpHandler {
       System.out.print(key + ":" + requestHeaders.get(key) + "; ");
     }
     System.out.println();
-    String queryResponse = "";  
+  
     String uriQuery = exchange.getRequestURI().getQuery();
     String uriPath = exchange.getRequestURI().getPath();
+    String queryResponse = "";
 
     if ((uriPath != null) && (uriQuery != null)){
       if (uriPath.equals("/search")){
@@ -56,8 +57,6 @@ class QueryHandler implements HttpHandler {
         if (keys.contains("query")){
           if (keys.contains("ranker")){
             String ranker_type = query_map.get("ranker");
-            // @CS2580: Invoke different ranking functions inside your
-            // implementation of the Ranker class.
             if (ranker_type.equals("cosine")){
               queryResponse = (ranker_type + " not implemented.");
             } else if (ranker_type.equals("QL")){
@@ -73,21 +72,12 @@ class QueryHandler implements HttpHandler {
             // @CS2580: The following is instructor's simple ranker that does not
             // use the Ranker class.
             Vector < ScoredDocument > sds = _ranker.runquery(query_map.get("query"));
-            Iterator < ScoredDocument > itr = sds.iterator();
-            while (itr.hasNext()){
-              ScoredDocument sd = itr.next();
-              if (queryResponse.length() > 0){
-                queryResponse = queryResponse + "\n";
-              }
-              queryResponse = queryResponse + query_map.get("query") + "\t" + sd.asString();
-            }
-            if (queryResponse.length() > 0){
-              queryResponse = queryResponse + "\n";
-            }
+            queryResponse = generate_text_response(sds, query_map.get("query"));
           }
         }
       }
     }
+    
     
       // Construct a simple response.
       Headers responseHeaders = exchange.getResponseHeaders();
@@ -96,5 +86,21 @@ class QueryHandler implements HttpHandler {
       OutputStream responseBody = exchange.getResponseBody();
       responseBody.write(queryResponse.getBytes());
       responseBody.close();
+  }
+  
+  private static String generate_text_response(Vector < ScoredDocument > sds, String query) {
+  	String queryResponse = "";
+  	Iterator < ScoredDocument > itr = sds.iterator();
+      while (itr.hasNext()){
+        ScoredDocument sd = itr.next();
+        if (queryResponse.length() > 0){
+          queryResponse = queryResponse + "\n";
+        }
+        queryResponse = queryResponse + query + "\t" + sd.asString();
+      }
+      if (queryResponse.length() > 0){
+        queryResponse = queryResponse + "\n";
+      }
+      return queryResponse;
   }
 }
