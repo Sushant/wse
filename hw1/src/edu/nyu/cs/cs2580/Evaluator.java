@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Scanner;
 
 class Evaluator {
-
+	
 	public static void main(String[] args) throws IOException {
 		HashMap<String, HashMap<Integer, Double>> relevance_judgments = new HashMap<String, HashMap<Integer, Double>>();
 		if (args.length < 1) {
@@ -71,7 +71,7 @@ class Evaluator {
 			String line = null;
 			double RR = 0.0;
 			double N = 0.0;
-
+			double AP = 0.0;
 			double f = 0.0;
 			double count = 0.0;
 			boolean flag = false;
@@ -96,6 +96,7 @@ class Evaluator {
 							flag = true;
 						}
 						RR += qr.get(did);
+						AP = AP + RR/(N+1);
 					}
 					if (counter == 0) {
 						System.out.println("Reciprocal_rank@1: " + f);
@@ -142,6 +143,7 @@ class Evaluator {
 					counter++;
 				}
 				System.out.println(Double.toString(RR / N));
+				System.out.println("Average Precision: " + Double.toString(AP/RR));
 			}
 		} catch (Exception e) {
 			System.err.println("Error:" + e.getMessage());
