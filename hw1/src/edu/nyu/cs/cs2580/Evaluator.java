@@ -71,7 +71,11 @@ class Evaluator {
 			String line = null;
 			double RR = 0.0;
 			double N = 0.0;
+			double f = 0.0;
+			double count = 0.0;
+			boolean flag = false;
 			while ((line = reader.readLine()) != null) {
+				++count;
 				Scanner s = new Scanner(line).useDelimiter("\t");
 				String query = s.next();
 				int did = Integer.parseInt(s.next());
@@ -82,16 +86,23 @@ class Evaluator {
 				}
 				HashMap<Integer, Double> qr = relevance_judgments.get(query);
 				if (qr.containsKey(did) != false) {
+					if(!flag){
+						f = 1 / count;
+						flag = true;
+					}
 					RR += qr.get(did);
 				}
 				if(counter == 0){
 					System.out.println("Precision@1: " + RR);
+					System.out.println("Reciprocal_rank@1: " + f);
 				}
 				if(counter == 4){
 					System.out.println("Precision@5: " + (RR/5));
+					System.out.println("Reciprocal_rank@5: " + f);
 				}
 				if(counter == 9){
 					System.out.println("Precision@10: " + (RR/10));
+					System.out.println("Reciprocal_rank@10: " + f);
 				}
 				++N;
 				counter++;
