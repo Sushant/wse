@@ -277,4 +277,9 @@ class Ranker {
 		Collections.sort(doc,comparator);
 		return doc;
 	}
+	
+	public Document getDoc(int did) {
+		Document d = _index.getDoc(did);
+		return d;
+	}
 }
