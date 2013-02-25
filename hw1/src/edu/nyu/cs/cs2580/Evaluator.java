@@ -60,10 +60,6 @@ class Evaluator {
 		}
 	}
 
-<<<<<<< HEAD
-	
-=======
->>>>>>> Trying git interface
 	public static void evaluateStdin(
 			HashMap<String, HashMap<Integer, Double>> relevance_judgments) {
 		// only consider one query per call
@@ -75,93 +71,82 @@ class Evaluator {
 			String line = null;
 			double RR = 0.0;
 			double N = 0.0;
-<<<<<<< HEAD
+
 			double f = 0.0;
 			double count = 0.0;
 			boolean flag = false;
 			while ((line = reader.readLine()) != null) {
 				++count;
-=======
-			while ((line = reader.readLine()) != null) {
->>>>>>> Trying git interface
-				Scanner s = new Scanner(line).useDelimiter("\t");
-				String query = s.next();
-				int did = Integer.parseInt(s.next());
-				String title = s.next();
-				double rel = Double.parseDouble(s.next());
-				if (relevance_judgments.containsKey(query) == false) {
-					throw new IOException("query not found");
-				}
-				HashMap<Integer, Double> qr = relevance_judgments.get(query);
-<<<<<<< HEAD
-				if (qr.containsKey(did) != false) {
-					if(!flag){
-						f = 1 / count;
-						flag = true;
+				while ((line = reader.readLine()) != null) {
+
+					Scanner s = new Scanner(line).useDelimiter("\t");
+					String query = s.next();
+					int did = Integer.parseInt(s.next());
+					String title = s.next();
+					double rel = Double.parseDouble(s.next());
+					if (relevance_judgments.containsKey(query) == false) {
+						throw new IOException("query not found");
 					}
-					RR += qr.get(did);
-				}
-				if(counter == 0){
-					System.out.println("Precision@1: " + RR);
-					System.out.println("Reciprocal_rank@1: " + f);
-				}
-				if(counter == 4){
-					System.out.println("Precision@5: " + (RR/5));
-					System.out.println("Reciprocal_rank@5: " + f);
-				}
-				if(counter == 9){
-					System.out.println("Precision@10: " + (RR/10));
-					System.out.println("Reciprocal_rank@10: " + f);
-=======
-				int numberOfRelevantDocs = numberOfRelevantDocs(qr);
-				if (qr.containsKey(did) != false) {
-					RR += qr.get(did);
-				}
-				if (counter == 0) {
-					double precision = RR;
-					double recall = RR / numberOfRelevantDocs;
-					System.out.println("Precision@1: " + RR);
-					System.out
-							.println("Recall@1: " + RR / numberOfRelevantDocs);
-					double intermediate = (0.5 / precision) + (0.5 / recall);
-					double F = Math.pow(intermediate, -1);
-					System.out.println("F0.5@1 : " + F);
-				}
-				if (counter == 4) {
-					double precision = RR / 5;
-					double recall = RR / numberOfRelevantDocs;
+					HashMap<Integer, Double> qr = relevance_judgments
+							.get(query);
+					int numberOfRelevantDocs = numberOfRelevantDocs(qr);
+					if (qr.containsKey(did) != false) {
+						if (!flag) {
+							f = 1 / count;
+							flag = true;
+						}
+						RR += qr.get(did);
+					}
+					if (counter == 0) {
+						System.out.println("Reciprocal_rank@1: " + f);
+						double precision = RR;
+						double recall = RR / numberOfRelevantDocs;
+						System.out.println("Precision@1: " + RR);
+						System.out.println("Recall@1: " + RR
+								/ numberOfRelevantDocs);
+						double intermediate = (0.5 / precision)
+								+ (0.5 / recall);
+						double F = Math.pow(intermediate, -1);
+						System.out.println("F0.5@1 : " + F);
+					}
+					if (counter == 4) {
+						System.out.println("Reciprocal_rank@5: " + f);
+						double precision = RR / 5;
+						double recall = RR / numberOfRelevantDocs;
 
-					System.out.println("Precision@5: " + (RR / 5));
-					System.out
-							.println("Recall@5: " + RR / numberOfRelevantDocs);
+						System.out.println("Precision@5: " + (RR / 5));
+						System.out.println("Recall@5: " + RR
+								/ numberOfRelevantDocs);
 
-					double intermediate = (0.5 / precision) + (0.5 / recall);
-					double F = Math.pow(intermediate, -1);
-					System.out.println("F0.5@5 : " + F);
+						double intermediate = (0.5 / precision)
+								+ (0.5 / recall);
+						double F = Math.pow(intermediate, -1);
+						System.out.println("F0.5@5 : " + F);
+					}
+					if (counter == 9) {
+						System.out.println("Reciprocal_rank@10: " + f);
+						double precision = RR / 10;
+						double recall = RR / numberOfRelevantDocs;
+
+						System.out.println("Precision@10: " + (RR / 10));
+						System.out.println("Recall@10: " + RR
+								/ numberOfRelevantDocs);
+
+						double intermediate = (0.5 / precision)
+								+ (0.5 / recall);
+						double F = Math.pow(intermediate, -1);
+						System.out.println("F0.5@10 : " + F);
+
+					}
+					++N;
+					counter++;
 				}
-				if (counter == 9) {
-					double precision = RR / 10;
-					double recall = RR / numberOfRelevantDocs;
-
-					System.out.println("Precision@10: " + (RR / 10));
-					System.out.println("Recall@10: " + RR
-							/ numberOfRelevantDocs);
-
-					double intermediate = (0.5 / precision) + (0.5 / recall);
-					double F = Math.pow(intermediate, -1);
-					System.out.println("F0.5@10 : " + F);
->>>>>>> Trying git interface
-				}
-				++N;
-				counter++;
+				System.out.println(Double.toString(RR / N));
 			}
-			System.out.println(Double.toString(RR / N));
 		} catch (Exception e) {
 			System.err.println("Error:" + e.getMessage());
 		}
 	}
-<<<<<<< HEAD
-=======
 
 	private static int numberOfRelevantDocs(Map<Integer, Double> qr) {
 		int count = 0;
@@ -172,5 +157,5 @@ class Evaluator {
 		}
 		return count;
 	}
->>>>>>> Trying git interface
+
 }
