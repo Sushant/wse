@@ -26,7 +26,7 @@ class Ranker {
 		}
 		return getSorted(retrieval_results);
 	}
-	
+
 	public Vector<ScoredDocument> cosineRanker(String query) {
 		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
 		for (int i = 0; i < _index.numDocs(); ++i) {
@@ -58,7 +58,7 @@ class Ranker {
 		}
 		return getSorted(retrieval_results);
 	}
-	
+
 	public ScoredDocument runquery(String query, int did) {
 
 		// Build query vector
@@ -119,6 +119,33 @@ class Ranker {
 				}
 			}
 		}
+		// /////////////////////////////////////////////////////////////////////////
+		// Perform query and document vector normalization //
+		// ////////////////////////////////////////////////////////////////////////
+		Vector<Double> normalizedDocRepresentation = new Vector<Double>();
+		Vector<Double> normalizedQueryRepresentation = new Vector<Double>();
+		double docDenominator = 0.0;
+		double queryDenominator = 0.0;
+		for (int i = 0; i < docRepresentation.size(); i++) {
+			docDenominator += Math.pow(docRepresentation.get(i), 2);
+			queryDenominator += Math.pow(queryRepresentation.get(i), 2);
+		}
+		docDenominator = Math.sqrt(docDenominator);
+		queryDenominator = Math.sqrt(queryDenominator);
+		for (int i = 0; i < docRepresentation.size(); i++) {
+			if (docDenominator != 0) {
+				normalizedDocRepresentation.add(docRepresentation.get(i)
+						/ docDenominator);
+			} else {
+				normalizedDocRepresentation.add(0.0);
+			}
+			if (queryDenominator != 0) {
+				normalizedQueryRepresentation.add(queryRepresentation.get(i)
+						/ queryDenominator);
+			} else {
+				normalizedQueryRepresentation.add(0.0);
+			}
+		}
 		// ////////////////////////////////////////////////////////////////////////
 
 		// ////////////////////////////////////////////////////////////////////////
@@ -127,18 +154,20 @@ class Ranker {
 		double numerator = 0.0;
 		double documentSquare = 0.0;
 		double querySquare = 0.0;
-		for (int i = 0; i < docRepresentation.size(); i++) {
+		for (int i = 0; i < normalizedDocRepresentation.size(); i++) {
 			numerator = numerator
-					+ (docRepresentation.get(i) * queryRepresentation.get(i));
+					+ (normalizedDocRepresentation.get(i) * normalizedQueryRepresentation
+							.get(i));
 			documentSquare = documentSquare
-					+ Math.pow(docRepresentation.get(i), 2);
-			querySquare = querySquare + Math.pow(queryRepresentation.get(i), 2);
+					+ Math.pow(normalizedDocRepresentation.get(i), 2);
+			querySquare = querySquare
+					+ Math.pow(normalizedQueryRepresentation.get(i), 2);
 		}
 		double denominator = 0.0;
 		denominator = Math.pow((documentSquare * querySquare), 0.5);
 		if (denominator != 0) {
 			score = numerator / denominator;
-		}else{
+		} else {
 			score = 0;
 		}
 		return new ScoredDocument(did, d.get_title_string(), score);
@@ -181,8 +210,8 @@ class Ranker {
 		}
 		return qv;
 	}
-	
-	public ScoredDocument phraseRanker(String query, int did){
+
+	public ScoredDocument phraseRanker(String query, int did) {
 		String queryStr = query + "\t" + query + "\t" + "-1";
 		Document queryDocument = new Document(-1, queryStr);
 		Vector < String > qpv = queryDocument.get_phrase_vector();

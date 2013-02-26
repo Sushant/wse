@@ -17,7 +17,6 @@ import java.util.Vector;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 class QueryHandler implements HttpHandler {
 
@@ -178,7 +177,7 @@ class QueryHandler implements HttpHandler {
 	        ScoredDocument sd = itr.next();
 	        logAction(query, sd._did , "render");
 	        Document d = _ranker.getDoc(sd._did);
-	        if (queryResponse.length() > 0){
+	        if (queryResponse.length() > 0) {
 	          queryResponse = queryResponse + "<br />";
 	        }
 	        queryResponse = queryResponse + "<a href=\"/result?did=" + d._docid + "&sid=" + _sessionId + "&q=" + query + "\">" + d.get_title_string() + "</a><br />";
