@@ -310,7 +310,7 @@ class Ranker {
 		for (int i = 0; i < queryRepresentation.size(); i++) { 
 			score += Math.log(queryRepresentation.get(i))/Math.log(2.0) ;
 		}
-		//score = Math.pow(score, 2);
+		score = Math.pow(2, score);
 
 		return new ScoredDocument(did, d.get_title_string(), score);
 	}
