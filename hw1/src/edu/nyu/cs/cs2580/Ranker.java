@@ -14,10 +14,10 @@ import java.util.Comparator;
 class Ranker {
 	private Index _index;
 	private static Map<String, Double> IDFMap = new HashMap<String, Double>();
-	final double betaCosine = 550;
-	final double betaPhrase = 8;
-	final double betaQL = -1.0;
-	final double betaNumViews = 0.00001;
+	final double betaCosine = 950;
+	final double betaPhrase = 14;
+	final double betaQL = -2.0;
+	final double betaNumViews = 0.001;
 
 	public Ranker(String index_source) {
 		_index = new Index(index_source);
@@ -64,11 +64,9 @@ class Ranker {
 	}
 
 	public Vector<ScoredDocument> linearRanker(String query) {
-		System.out.println("Linear");
 		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
 		for (int i = 0; i < _index.numDocs(); ++i) {
 			double score = 0.0;
-			Document d = _index.getDoc(i);
 			ScoredDocument sd = cosineRanker(query, i);
 			score += (betaCosine * sd._score);
 			System.out.print("\nCosine score" + score);
@@ -81,7 +79,7 @@ class Ranker {
 			sd = numviewsRanker(query, i);
 			score += (betaNumViews * sd._score);
 			System.out.print(" Numviews score" + (betaNumViews * sd._score));
-			sd = new ScoredDocument(i, d.get_title_string(), score);
+			sd = new ScoredDocument(i, sd._title, score);
 			retrieval_results.add(sd);
 		}
 		return getSorted(retrieval_results);
@@ -192,7 +190,7 @@ class Ranker {
 					+ Math.pow(normalizedQueryRepresentation.get(i), 2);
 		}
 		double denominator = 0.0;
-		denominator = Math.pow((documentSquare * querySquare), 0.5);
+		denominator = Math.sqrt((documentSquare * querySquare));
 		if (denominator != 0) {
 			score = numerator / denominator;
 		} else {
@@ -257,7 +255,11 @@ class Ranker {
 	
 	public ScoredDocument numviewsRanker(String query, int did) {
 		Document d = _index.getDoc(did);
+		if (d == null) {
+			return new ScoredDocument(did, "", 0);
+		}
 		return new ScoredDocument(did, d.get_title_string(), d.get_numviews());
+		
 	}
 
 
