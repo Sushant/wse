@@ -105,17 +105,16 @@ class Evaluator {
 			HashMap<String, HashMap<Integer, Double>> relevance_judgmentsNDCG) {
 		// only consider one query per call
 		int counter = 0;
+		Map<Double, Double> recallPrecisionMap = new TreeMap<Double, Double>();
 		try {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(
 					System.in));
 
 			String line = null;
-			double RR = 0.0;
-			double N = 0.0;
-
+			double RR = 0.0, N = 0.0, AP = 0.0, count = 0.0, totalRecall = 0.0 ;
 			double f = 0.0, DCG = 0.0, Max_DCG = 0.0, NDCG = 0.0;
-			double count = 0.0;
 			boolean flag = false;
+			
 			while ((line = reader.readLine()) != null) {
 				++count;
 				Scanner s = new Scanner(line).useDelimiter("\t");
@@ -126,6 +125,7 @@ class Evaluator {
 				if (relevance_judgments.containsKey(query) == false) {
 					throw new IOException("query not found");
 				}
+
 				if (relevance_judgmentsNDCG.containsKey(query) == false) {
 					throw new IOException("query not found");
 				}
@@ -134,7 +134,7 @@ class Evaluator {
 						.get(query);
 				Map<Integer, Double> qr_ndcg_sorted = relevance_judgmentsNDCG
 						.get(query);
-				
+
 				int numberOfRelevantDocs = numberOfRelevantDocs(qr);
 				if (qr.containsKey(did) != false) {
 					if (!flag) {
@@ -142,16 +142,18 @@ class Evaluator {
 						flag = true;
 					}
 					RR += qr.get(did);
+					AP = AP + RR / (N + 1);
+
 				}
 				if (!qr.containsKey(did)) {
 					qr_ndcg.put(did, 0.0);
 					qr_ndcg_sorted.put(did, 0.0);
 					qr.put(did, 0.0);
 				}
-
+				
 				qr_ndcg_sorted = sortMapByValues(qr_ndcg);
 				DCG = updateDCG(DCG, count, qr_ndcg, did);
-			
+
 				if (counter == 0) {
 					System.out.println("Reciprocal_rank@1: " + f);
 					double precision = RR;
@@ -169,7 +171,6 @@ class Evaluator {
 					System.out.println("Reciprocal_rank@5: " + f);
 					double precision = RR / 5;
 					double recall = RR / numberOfRelevantDocs;
-
 					System.out.println("Precision@5: " + (RR / 5));
 					System.out
 							.println("Recall@5: " + RR / numberOfRelevantDocs);
@@ -177,7 +178,7 @@ class Evaluator {
 					double intermediate = (0.5 / precision) + (0.5 / recall);
 					double F = Math.pow(intermediate, -1);
 					System.out.println("F0.5@5 : " + F);
-					Max_DCG = findDCG_Max(count,qr_ndcg_sorted);
+					Max_DCG = findDCG_Max(count, qr_ndcg_sorted);
 					NDCG = updateNDCG(DCG, Max_DCG);
 					System.out.println("NDCG@5 : " + NDCG);
 				} else if (counter == 9) {
@@ -192,12 +193,33 @@ class Evaluator {
 					double intermediate = (0.5 / precision) + (0.5 / recall);
 					double F = Math.pow(intermediate, -1);
 					System.out.println("F0.5@10 : " + F);
-					Max_DCG = findDCG_Max(count,qr_ndcg_sorted);
+					Max_DCG = findDCG_Max(count, qr_ndcg_sorted);
 					NDCG = updateNDCG(DCG, Max_DCG);
 					System.out.println("NDCG@10 : " + NDCG);
 				}
+				totalRecall = RR / numberOfRelevantDocs;
+				if (totalRecall <= 1) {
+					double tempPrecision = RR / (counter + 1);
+					recallPrecisionMap.put(totalRecall, tempPrecision);
+				}
 				++N;
 				counter++;
+			}
+			System.out.println(Double.toString(RR / N));
+			System.out.println("   Map      " + recallPrecisionMap);
+			System.out
+					.println("Average Precision: " + Double.toString(AP / RR));
+			for (int i = 0; i <= 10; i++) {
+				double max = Double.MIN_VALUE;
+				for (Map.Entry<Double, Double> entry : recallPrecisionMap
+						.entrySet()) {
+					if (max < entry.getValue()) {
+						max = entry.getValue();
+					}
+				}
+				System.out.println("Precision at recall point "
+						+ ((double) i / (double) 10) + " : " + max);
+				recallPrecisionMap.remove(((double) i / (double) 10));
 			}
 			System.out.println(Double.toString(RR / N));
 		} catch (Exception e) {
@@ -213,16 +235,17 @@ class Evaluator {
 		}
 		return DCG;
 	}
-	
-	private static double findDCG_Max(double count, Map<Integer, Double> qr_ndcg) {	
-		int num = 0;
+
+	private static double findDCG_Max(double count, Map<Integer, Double> qr_ndcg_sorted) {
+		double num = 0.0;
 		double Max_DCG = 0.0;
 		double log_2 = Math.log(count + 1) / Math.log(2.0);
-		Iterator<Entry<Integer, Double>> it = qr_ndcg.entrySet().iterator();
-		
-		while (it.hasNext() && num < count ) {
+		Iterator<Entry<Integer, Double>> it = qr_ndcg_sorted.entrySet().iterator();
+
+		while (it.hasNext() && num < count) {
 			Map.Entry pairs = (Map.Entry) it.next();
-			Max_DCG = Max_DCG + (Double)pairs.getValue() / log_2;
+			Max_DCG = Max_DCG + (Double) pairs.getValue() / log_2;
+			num++;
 		}
 		return Max_DCG;
 	}
@@ -245,7 +268,8 @@ class Evaluator {
 		return count;
 	}
 
-	private static Map<Integer, Double> sortMapByValues(Map<Integer, Double> myMap) {
+	private static Map<Integer, Double> sortMapByValues(
+			Map<Integer, Double> myMap) {
 		ArrayList as = new ArrayList(myMap.entrySet());
 		Collections.sort(as, new Comparator() {
 			public int compare(Object o1, Object o2) {
