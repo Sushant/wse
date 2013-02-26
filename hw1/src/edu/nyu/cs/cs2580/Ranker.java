@@ -14,6 +14,10 @@ import java.util.Comparator;
 class Ranker {
 	private Index _index;
 	private static Map<String, Double> IDFMap = new HashMap<String, Double>();
+	final double betaCosine = 550;
+	final double betaPhrase = 8;
+	final double betaQL = -1.0;
+	final double betaNumViews = 0.00001;
 
 	public Ranker(String index_source) {
 		_index = new Index(index_source);
@@ -55,6 +59,30 @@ class Ranker {
 		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
 		for (int i = 0; i < _index.numDocs(); ++i) {
 			retrieval_results.add(phraseRanker(query, i));
+		}
+		return getSorted(retrieval_results);
+	}
+
+	public Vector<ScoredDocument> linearRanker(String query) {
+		System.out.println("Linear");
+		Vector<ScoredDocument> retrieval_results = new Vector<ScoredDocument>();
+		for (int i = 0; i < _index.numDocs(); ++i) {
+			double score = 0.0;
+			Document d = _index.getDoc(i);
+			ScoredDocument sd = cosineRanker(query, i);
+			score += (betaCosine * sd._score);
+			System.out.print("\nCosine score" + score);
+			sd = phraseRanker(query, i);
+			score += (betaPhrase * sd._score);
+			System.out.print(" Phrase score" + (betaPhrase * sd._score ));
+			sd = queryLikelihoodRanker(query, i);
+			score += (betaQL * sd._score);
+			System.out.print(" QL score" + (betaQL * sd._score));
+			sd = numviewsRanker(query, i);
+			score += (betaNumViews * sd._score);
+			System.out.print(" Numviews score" + (betaNumViews * sd._score));
+			sd = new ScoredDocument(i, d.get_title_string(), score);
+			retrieval_results.add(sd);
 		}
 		return getSorted(retrieval_results);
 	}

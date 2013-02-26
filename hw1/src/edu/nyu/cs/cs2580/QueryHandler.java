@@ -138,7 +138,7 @@ class QueryHandler implements HttpHandler {
       } else if (ranker_type.equals("phrase")){
       	sds = _ranker.phraseRanker(queryStr);
       } else if (ranker_type.equals("linear")){
-      	sds = new Vector < ScoredDocument >();
+    	sds = _ranker.linearRanker(queryStr);
       } else if (ranker_type.equals("numviews")){
       	sds = _ranker.numviewsRanker(queryStr);
       } else {
