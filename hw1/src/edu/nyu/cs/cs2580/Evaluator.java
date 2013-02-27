@@ -111,14 +111,21 @@ class Evaluator {
 					System.in));
 
 			String line = null;
-			double RR = 0.0, N = 0.0, AP = 0.0, count = 0.0, totalRecall = 0.0 ;
+			double RR = 0.0, N = 0.0, AP = 0.0, count = 0.0, totalRecall = 0.0;
 			double f = 0.0, DCG = 0.0, Max_DCG = 0.0, NDCG = 0.0;
 			boolean flag = false;
-			
+			double precisionAt1 = 0.0, precisionAt5 = 0.0, precisionAt10 = 0.0;
+			double recallAt1 = 0.0, recallAt5 = 0.0, recallAt10 = 0.0;
+			double Fat1 = 0.0, Fat5 = 0.0, Fat10 = 0.0;
+			double averagePrecision = 0.0;
+			double NDCGat1 = 0.0, NDCGat5 = 0.0, NDCGat10 = 0.0;
+			double reciprocalRank = 0.0,relevance = 0.0;
+			String queryName = null;
 			while ((line = reader.readLine()) != null) {
 				++count;
 				Scanner s = new Scanner(line).useDelimiter("\t");
 				String query = s.next();
+				queryName = query;
 				int did = Integer.parseInt(s.next());
 				String title = s.next();
 				double rel = Double.parseDouble(s.next());
@@ -142,73 +149,108 @@ class Evaluator {
 						flag = true;
 					}
 					RR += qr.get(did);
-					AP = AP + RR / (N + 1);
-
+				}
+				if(qr.containsKey(did) && qr.get(did) == 1.0){
+					relevance++;
+					AP = AP + relevance/(N+1);
 				}
 				if (!qr.containsKey(did)) {
 					qr_ndcg.put(did, 0.0);
 					qr_ndcg_sorted.put(did, 0.0);
 					qr.put(did, 0.0);
 				}
-				
+
 				qr_ndcg_sorted = sortMapByValues(qr_ndcg);
 				DCG = updateDCG(DCG, count, qr_ndcg, did);
 
 				if (counter == 0) {
-					System.out.println("Reciprocal_rank@1: " + f);
+					reciprocalRank = f;
 					double precision = RR;
-					double recall = RR / numberOfRelevantDocs;
-					System.out.println("Precision@1: " + RR);
-					System.out
-							.println("Recall@1: " + RR / numberOfRelevantDocs);
-					double intermediate = (0.5 / precision) + (0.5 / recall);
+					double recall = 0.0;
+					if (numberOfRelevantDocs != 0) {
+						recall = RR / numberOfRelevantDocs;
+						recallAt1 = RR / numberOfRelevantDocs;
+					}
+					precisionAt1 = RR;
+					double intermediate = 0.0;
+					if (recall != 0) {
+						intermediate = (0.5 / precision) + (0.5 / recall);
+					} else {
+						intermediate = (0.5 / precision);
+					}
 					double F = Math.pow(intermediate, -1);
-					System.out.println("F0.5@1 : " + F);
+					Fat1 = F;
 					Max_DCG = findDCG_Max(count, qr_ndcg_sorted);
 					NDCG = updateNDCG(DCG, Max_DCG);
-					System.out.println("NDCG@1 : " + NDCG);
+					NDCGat1 = NDCG;
 				} else if (counter == 4) {
-					System.out.println("Reciprocal_rank@5: " + f);
+					reciprocalRank = f;
 					double precision = RR / 5;
-					double recall = RR / numberOfRelevantDocs;
-					System.out.println("Precision@5: " + (RR / 5));
-					System.out
-							.println("Recall@5: " + RR / numberOfRelevantDocs);
-
-					double intermediate = (0.5 / precision) + (0.5 / recall);
+					double recall = 0.0;
+					if (numberOfRelevantDocs != 0) {
+						recall = RR / numberOfRelevantDocs;
+						recallAt5 = RR / numberOfRelevantDocs;
+					}
+					precisionAt5 = RR / 5;
+					double intermediate = 0.0;
+					if (recall != 0) {
+						intermediate = (0.5 / precision) + (0.5 / recall);
+					} else {
+						intermediate = (0.5 / precision);
+					}
 					double F = Math.pow(intermediate, -1);
-					System.out.println("F0.5@5 : " + F);
+					Fat5 = F;
 					Max_DCG = findDCG_Max(count, qr_ndcg_sorted);
 					NDCG = updateNDCG(DCG, Max_DCG);
-					System.out.println("NDCG@5 : " + NDCG);
+					NDCGat5 = NDCG;
 				} else if (counter == 9) {
-					System.out.println("Reciprocal_rank@10: " + f);
+					reciprocalRank = f;
 					double precision = RR / 10;
-					double recall = RR / numberOfRelevantDocs;
-
-					System.out.println("Precision@10: " + (RR / 10));
-					System.out.println("Recall@10: " + RR
-							/ numberOfRelevantDocs);
-
-					double intermediate = (0.5 / precision) + (0.5 / recall);
+					double recall = 0.0;
+					if (numberOfRelevantDocs != 0) {
+						recall = RR / numberOfRelevantDocs;
+						recallAt10 = RR / numberOfRelevantDocs;
+					}
+					precisionAt10 = RR / 10;
+					double intermediate = 0.0;
+					if (recall != 0) {
+						intermediate = (0.5 / precision) + (0.5 / recall);
+					} else {
+						intermediate = (0.5 / precision);
+					}
 					double F = Math.pow(intermediate, -1);
-					System.out.println("F0.5@10 : " + F);
+					Fat10 = F;
 					Max_DCG = findDCG_Max(count, qr_ndcg_sorted);
 					NDCG = updateNDCG(DCG, Max_DCG);
-					System.out.println("NDCG@10 : " + NDCG);
+					NDCGat10 = NDCG;
 				}
 				totalRecall = RR / numberOfRelevantDocs;
 				if (totalRecall <= 1) {
 					double tempPrecision = RR / (counter + 1);
-					recallPrecisionMap.put(totalRecall, tempPrecision);
+
+					if (recallPrecisionMap.get(totalRecall) != null) {
+						double precisionAtRecall = recallPrecisionMap
+								.get(totalRecall);
+						double precisionAtRecallPoint = (tempPrecision > precisionAtRecall) ? tempPrecision
+								: precisionAtRecall;
+						recallPrecisionMap.put(totalRecall,
+								precisionAtRecallPoint);
+					} else {
+						recallPrecisionMap.put(totalRecall, tempPrecision);
+					}
 				}
 				++N;
 				counter++;
 			}
-			System.out.println(Double.toString(RR / N));
-			System.out.println("   Map      " + recallPrecisionMap);
-			System.out
-					.println("Average Precision: " + Double.toString(AP / RR));
+			if (relevance != 0) {
+				averagePrecision = AP / relevance;
+			} else {
+				averagePrecision = 0.0;
+			}
+			System.out.print(queryName + "\t" + precisionAt1 + "\t"
+					+ precisionAt5 + "\t" + precisionAt10 + "\t" + recallAt1
+					+ "\t" + recallAt5 + "\t" + recallAt10 + "\t" + Fat1 + "\t"
+					+ Fat5 + "\t" + Fat10);
 			for (int i = 0; i <= 10; i++) {
 				double max = Double.MIN_VALUE;
 				for (Map.Entry<Double, Double> entry : recallPrecisionMap
@@ -217,11 +259,19 @@ class Evaluator {
 						max = entry.getValue();
 					}
 				}
-				System.out.println("Precision at recall point "
-						+ ((double) i / (double) 10) + " : " + max);
+				System.out.print("\t" + max);
 				recallPrecisionMap.remove(((double) i / (double) 10));
+				for (Map.Entry<Double, Double> entry : recallPrecisionMap
+						.entrySet()) {
+					if (entry.getKey() < (double) i / (double) 10) {
+						entry.setValue(Double.MIN_VALUE);
+					}
+				}
 			}
-			System.out.println(Double.toString(RR / N));
+
+			System.out.print("\t" + averagePrecision + "\t" + NDCGat1 + "\t"
+					+ NDCGat5 + "\t" + NDCGat10 + "\t" + reciprocalRank);
+			System.out.print("\n");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -229,21 +279,30 @@ class Evaluator {
 
 	private static double updateDCG(double DCG, double count,
 			Map<Integer, Double> qr_ndcg, int did) {
-		double log_2 = Math.log(count + 1) / Math.log(2.0);
-		if (qr_ndcg.get(did) != null) {
+		double log_2 = Math.log(count) / Math.log(2.0);
+		if(count == 1){
+			DCG = qr_ndcg.get(did);
+		}
+		else if (qr_ndcg.get(did) != null) {
 			DCG = DCG + (qr_ndcg.get(did) / log_2);
 		}
 		return DCG;
 	}
 
-	private static double findDCG_Max(double count, Map<Integer, Double> qr_ndcg_sorted) {
+	private static double findDCG_Max(double count,
+			Map<Integer, Double> qr_ndcg_sorted) {
 		double num = 0.0;
 		double Max_DCG = 0.0;
-		double log_2 = Math.log(count + 1) / Math.log(2.0);
-		Iterator<Entry<Integer, Double>> it = qr_ndcg_sorted.entrySet().iterator();
 
+		Iterator<Entry<Integer, Double>> it = qr_ndcg_sorted.entrySet()
+				.iterator();
+
+		Map.Entry pairs = (Map.Entry) it.next();
+		Max_DCG = (Double) pairs.getValue();
+		num = 1.0;
 		while (it.hasNext() && num < count) {
-			Map.Entry pairs = (Map.Entry) it.next();
+			double log_2 = Math.log(num + 1) / Math.log(2.0);
+			pairs = (Map.Entry) it.next();
 			Max_DCG = Max_DCG + (Double) pairs.getValue() / log_2;
 			num++;
 		}
