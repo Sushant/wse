@@ -12,7 +12,10 @@ public class Tokenizer {
 		Scanner scan = new Scanner(input);
 		scan.useDelimiter(pattern);
 	     while (scan.hasNext()) {
-	    	 tokens.add(scan.next());
+	    	 String next = scan.next();
+	    	 next.trim();
+	    	 if(!next.isEmpty())
+	    		 tokens.add(next);
 	     }
 	     return tokens;
 	}
