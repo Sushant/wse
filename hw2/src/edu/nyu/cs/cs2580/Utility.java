@@ -1,6 +1,8 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +25,7 @@ class Utility {
 		return tokens;
 	}
 
-	public static String extractText(String url) throws Exception {
+	public String extractText(String url) throws MalformedURLException, IOException {
 		String sourceUrlString = url;
 		if (sourceUrlString.indexOf(':') == -1)
 			sourceUrlString = "file:" + sourceUrlString;
