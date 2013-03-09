@@ -303,7 +303,7 @@ class Stemmer {
 		i = 0;
 	}
 
-	public String getStemmedWord(String word) {
+	public static String getStemmedWord(String word) {
 		Stemmer s = new Stemmer();
 		s.add(word.toCharArray(), word.length());
 		s.stem();

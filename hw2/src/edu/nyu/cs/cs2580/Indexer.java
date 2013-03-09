@@ -30,12 +30,16 @@ public abstract class Indexer {
   protected int _numDocs = 0;
   protected long _totalTermFrequency = 0;
 
+  // Persistent store class, for serializing/de-serializing index files
+  protected PersistentStore _persistentStore;
+  
   // Provided for serialization.
   public Indexer() { }
 
   // The real constructor
   public Indexer(Options options) {
     _options = options;
+    _persistentStore = PersistentStore.getInstance();
   }
 
   // APIs for document retrieval.
