@@ -10,6 +10,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.List;
 import java.util.Map;
 
 import com.google.gson.Gson;
@@ -38,7 +39,7 @@ public class PersistentStore {
 		return INSTANCE;
 	}
 
-	public void save(String filepath, Map<String, Map<Integer, Integer>> indexMap) throws IOException {
+	public void save(String filepath, Map<String, List<Integer>> indexMap) throws IOException {
 		Writer writer = new OutputStreamWriter(new FileOutputStream(filepath));
 
 		Gson gson = new GsonBuilder().create();
@@ -47,11 +48,11 @@ public class PersistentStore {
 		writer.close();
 	}
 
-	public Map<String, Map<Integer, Integer>> load(String filepath) throws IOException {
+	public Map<String, List<Integer>> load(String filepath) throws IOException {
 		Reader reader = new InputStreamReader(new FileInputStream(filepath));
 
 		Gson gson = new GsonBuilder().create();
-		Map<String, Map<Integer, Integer>> indexMap = gson.fromJson(reader, new TypeToken<Map<String, Map<Integer, Integer>>>() {}.getType());
+		Map<String, List<Integer>> indexMap = gson.fromJson(reader, new TypeToken<Map<String, List<Integer>>>() {}.getType());
 
 		reader.close();
 		return indexMap;

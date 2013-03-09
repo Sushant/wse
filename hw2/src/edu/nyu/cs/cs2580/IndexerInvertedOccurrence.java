@@ -2,6 +2,7 @@ package edu.nyu.cs.cs2580;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,13 +16,13 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class IndexerInvertedOccurrence extends Indexer {
 
 	// Stores all Document in memory.
-	final int BULK_WRITE_SIZE = 350;
+	final int BULK_WRITE_SIZE = 300;
 	private Vector<Document> _documents = new Vector<Document>();
-	private Map<Character, Map<String, Map<Integer, Integer>>> _characterMap;
+	private Map<String, Map<String, List<Integer>>> _characterMap;
 	
   public IndexerInvertedOccurrence(Options options) {
     super(options);
-    _characterMap = new HashMap<Character, Map<String, Map<Integer, Integer>>>();
+    _characterMap = new HashMap<String, Map<String, List<Integer>>>();
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
   }
 
@@ -33,7 +34,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 		  if (_documents.size() % BULK_WRITE_SIZE == 0) {
 			  System.out.println("Processed files: " + _documents.size());
 			  updateIndexWithMap(_characterMap);
-			  _characterMap = new HashMap<Character, Map<String, Map<Integer, Integer>>>();
+			  _characterMap = new HashMap<String, Map<String, List<Integer>>>();
 		  }
 	  }
 	  if (_characterMap != null) {
@@ -41,39 +42,33 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  }
   }
 
-  private void processDocument(String filename) {
+  private void processDocument(String filename) throws MalformedURLException, IOException {
 	  String corpusFile = _options._corpusPrefix + "/" + filename;
 	  
 	  int docId = _documents.size();
 	  String document;
-	  try {
-		  document = Utility.extractText(corpusFile);
-		  List<String> stemmedTokens = Utility.tokenize(document);
-		  buildMapFromTokens(docId, stemmedTokens);
-		  _documents.add(new DocumentIndexed(docId));
-	  } catch (MalformedURLException e) {
-		  System.out.println(filename);
-		  e.printStackTrace();
-	  } catch (IOException e) {
-		  System.out.println(filename);
-		  e.printStackTrace();
-	  }
+	  document = Utility.extractText(corpusFile);
+	  List<String> stemmedTokens = Utility.tokenize(document);
+	  buildMapFromTokens(docId, stemmedTokens);
+	  _documents.add(new DocumentIndexed(docId));
   }
   
-  private void updateIndexWithMap(
-		Map<Character, Map<String, Map<Integer, Integer>>> characterMap) {
-	for (Character c : characterMap.keySet()) {
-		String indexFile = _options._indexPrefix + "/" + c + ".idx";
-		Map<String, Map<Integer, Integer>> wordMap = characterMap.get(c);
+  private void updateIndexWithMap(Map<String, Map<String, List<Integer>>> characterMap) {
+	for (String chars : characterMap.keySet()) {
+		Integer docBatch = _documents.size() / BULK_WRITE_SIZE;
+		String filename = chars + docBatch.toString();
+		String indexFile = _options._indexPrefix + "/" + filename + ".idx";
+		Map<String, List<Integer>> wordMap = characterMap.get(chars);
 		try {
-			Map<String, Map<Integer, Integer>> loadedWordMap = _persistentStore.load(indexFile);
+			Map<String, List<Integer>> loadedWordMap = _persistentStore.load(indexFile);
 			for (String word: wordMap.keySet()) {
-				Map<Integer, Integer> docMap = wordMap.get(word);
+				List<Integer> docList = wordMap.get(word);
 				if (loadedWordMap.containsKey(word)) {
-					Map<Integer, Integer> loadedDocMap = loadedWordMap.get(word);
-					for (Integer docId: docMap.keySet()) {
+					loadedWordMap.get(word).addAll(docList);
+					//Map<Integer, List<Integer>> loadedDocMap = loadedWordMap.get(word);
+					/*for (Integer docId: docMap.keySet()) {
 						loadedDocMap.put(docId, docMap.get(docId));
-					}
+					}*/
 				}
 			}
 			_persistentStore.save(indexFile, loadedWordMap);
@@ -84,39 +79,50 @@ public class IndexerInvertedOccurrence extends Indexer {
 				System.out.println("Failed to write " + indexFile);
 			}
 		}
-		
 	}
-	
-}
+  }
+  
 
-private void buildMapFromTokens(int docId, List<String> tokens) {
+  private void buildMapFromTokens(int docId, List<String> tokens) {
+	  int tokenIndex = 0;
 	  for(String token : tokens){
-			char start = token.charAt(0);
+		  String start;
+		  	if (token.length() >= 2) {
+		  		start = token.substring(0, 2);
+		  	} else {
+		  		start = token.substring(0, 1);
+		  	}
 			if (_characterMap.containsKey(start)) {
-				Map<String, Map<Integer, Integer>> wordMap = _characterMap.get(start);
+				Map<String, List<Integer>> wordMap = _characterMap.get(start);
 				
 				if (wordMap.containsKey(token)) {
-					Map <Integer, Integer> docMap = wordMap.get(token);
-					if (docMap.containsKey(docId)) {
-						Integer occurrences = docMap.get(docId);
-						docMap.put(docId, occurrences + 1);
+					List<Integer> docList = wordMap.get(token);
+					docList.add(docId);
+					docList.add(tokenIndex);
+					/*if (docMap.containsKey(docId)) {
+						docMap.get(docId).add(tokenIndex);
 					} else {
-						docMap.put(docId, 1);
-					}
+						List<Integer> occurrences = new ArrayList<Integer>();
+						occurrences.add(tokenIndex);
+						docMap.put(docId, occurrences);
+					}*/
 				} else {
-					Map <Integer, Integer> docMap = new HashMap<Integer, Integer>();
-					docMap.put(docId, 1);
-					wordMap.put(token, docMap);
+					List<Integer> docList = new ArrayList<Integer>();
+					docList.add(docId);
+					docList.add(tokenIndex);
+					wordMap.put(token, docList);
 				}
 			} else {
-				Map <Integer, Integer> docMap = new HashMap<Integer, Integer>();
-				docMap.put(docId, 1);
-				Map<String, Map<Integer, Integer>> wordMap = new HashMap<String, Map<Integer, Integer>>();
-				wordMap.put(token, docMap);
+				List<Integer> docList = new ArrayList<Integer>();
+				docList.add(docId);
+				docList.add(tokenIndex);
+				Map<String, List<Integer>> wordMap = new HashMap<String, List<Integer>>();
+				wordMap.put(token, docList);
 				_characterMap.put(start, wordMap);
 			}
+			tokenIndex++;
 		}
-}
+  }
 
 @Override
   public void loadIndex() throws IOException, ClassNotFoundException {
