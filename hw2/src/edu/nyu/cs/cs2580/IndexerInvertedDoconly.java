@@ -1,13 +1,16 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Vector;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -16,6 +19,14 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW2.
  */
 public class IndexerInvertedDoconly extends Indexer {
+	// Term document frequency, key is the integer representation of the term
+	// and
+	// value is the number of documents the term appears in.
+	private Map<String, Integer> _termDocFrequency = new HashMap<String, Integer>();
+	// Term frequency, key is the integer representation of the term and value
+	// is
+	// the number of times the term appears in the corpus.
+	private Map<String, Integer> _termCorpusFrequency = new HashMap<String, Integer>();
 	private Vector<Document> _documents = new Vector<Document>();
 
 	public IndexerInvertedDoconly(Options options) {
@@ -31,8 +42,6 @@ public class IndexerInvertedDoconly extends Indexer {
 		Map<Character, Map<String, List<Integer>>> characterMap = new HashMap<Character, Map<String, List<Integer>>>();
 		for (String file : files) {
 			counter++;
-			System.out.println("Indexing "
-					+ (_options._corpusPrefix + "/" + file));
 			String url = _options._corpusPrefix + "/" + file;
 			String document = Utility.extractText(url);
 			List<String> tokens = Utility.tokenize(document);
@@ -73,6 +82,39 @@ public class IndexerInvertedDoconly extends Indexer {
 			writeFile(characterMap);
 			characterMap.clear();
 		}
+		mergeAll();
+	}
+
+	private void mergeAll() throws IOException {
+		List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
+		for (String file : files) {
+			System.out.println("Merging... " + file);
+			Map<Character, Map<String, List<Integer>>> characterMap = readAll(file);
+			String fileName = _options._indexPrefix + "/" + file;
+			File charFile = new File(fileName);
+			charFile.delete();
+			writeFile(characterMap);
+		}
+	}
+
+	private Map<Character, Map<String, List<Integer>>> readAll(String fileName)
+			throws FileNotFoundException {
+		String file = _options._indexPrefix + "/" + fileName;
+		Scanner scan = new Scanner(new File(file));
+		Map<Character, Map<String, List<Integer>>> CharacterMap = new HashMap<Character, Map<String, List<Integer>>>();
+		Map<String, List<Integer>> tempMap = new HashMap<String, List<Integer>>();
+		while (scan.hasNextLine()) {
+			String line = scan.nextLine();
+			String lineArray[] = line.split(" ");
+			String word = lineArray[0];
+			List<Integer> tempList = new ArrayList<Integer>();
+			for (int i = 1; i < lineArray.length; i++) {
+				tempList.add(Integer.parseInt(lineArray[i]));
+			}
+			tempMap.put(word, tempList);
+		}
+		CharacterMap.put(fileName.charAt(0), tempMap);
+		return CharacterMap;
 	}
 
 	private void writeFile(
@@ -137,6 +179,10 @@ public class IndexerInvertedDoconly extends Indexer {
 	public static void main(String[] args) throws IOException {
 		Options option = new Options("conf/engine.conf");
 		IndexerInvertedDoconly in = new IndexerInvertedDoconly(option);
+		Date d = new Date();
 		in.constructIndex();
+		Date d1 = new Date();
+		System.out.println(d);
+		System.out.println(d1);
 	}
 }
