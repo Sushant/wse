@@ -19,13 +19,16 @@ class Utility {
 		scan.useDelimiter(pattern);
 		while (scan.hasNext()) {
 			String next = scan.next();
-			if (!next.isEmpty())
-				tokens.add(scan.next());
+			if (!next.isEmpty()) {
+				next.toLowerCase();
+				tokens.add(next);
+			}
 		}
 		return tokens;
 	}
 
-	public static String extractText(String url) throws MalformedURLException, IOException {
+	public static String extractText(String url) throws MalformedURLException,
+			IOException {
 		String sourceUrlString = url;
 		if (sourceUrlString.indexOf(':') == -1)
 			sourceUrlString = "file:" + sourceUrlString;
