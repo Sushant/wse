@@ -20,6 +20,7 @@ class Utility {
 		while (scan.hasNext()) {
 			String next = scan.next();
 			if (!next.isEmpty()) {
+				next.trim();
 				String stemmedToken = Stemmer.getStemmedWord(next.toLowerCase());
 				tokens.add(stemmedToken);
 			}

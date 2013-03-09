@@ -47,8 +47,7 @@ public class IndexerInvertedDoconly extends Indexer {
 			List<String> tokens = Utility.tokenize(document);
 			int docId = _documents.size();
 			DocumentIndexed doc = new DocumentIndexed(docId);
-			for (String token : tokens) {
-				String stemmedToken = Stemmer.getStemmedWord(token);
+			for (String stemmedToken : tokens) {
 				char start = stemmedToken.charAt(0);
 				if (characterMap.containsKey(start)) {
 					Map<String, List<Integer>> tempMap = characterMap
@@ -111,7 +110,13 @@ public class IndexerInvertedDoconly extends Indexer {
 			for (int i = 1; i < lineArray.length; i++) {
 				tempList.add(Integer.parseInt(lineArray[i]));
 			}
-			tempMap.put(word, tempList);
+			if (tempMap.containsKey(word)) {
+				List<Integer> temp = tempMap.get(word);
+				temp.addAll(tempList);
+				tempMap.put(word, temp);
+			} else {
+				tempMap.put(word, tempList);
+			}
 		}
 		CharacterMap.put(fileName.charAt(0), tempMap);
 		return CharacterMap;
