@@ -48,8 +48,8 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  String document;
 	  try {
 		  document = Utility.extractText(corpusFile);
-		  List<String> tokens = Utility.tokenize(document);
-		  buildMapFromTokens(docId, tokens);
+		  List<String> stemmedTokens = Utility.tokenize(document);
+		  buildMapFromTokens(docId, stemmedTokens);
 		  _documents.add(new DocumentIndexed(docId));
 	  } catch (MalformedURLException e) {
 		  System.out.println(filename);
@@ -91,13 +91,12 @@ public class IndexerInvertedOccurrence extends Indexer {
 
 private void buildMapFromTokens(int docId, List<String> tokens) {
 	  for(String token : tokens){
-			String stemmedToken = Stemmer.getStemmedWord(token);
-			char start = stemmedToken.charAt(0);
+			char start = token.charAt(0);
 			if (_characterMap.containsKey(start)) {
 				Map<String, Map<Integer, Integer>> wordMap = _characterMap.get(start);
 				
-				if (wordMap.containsKey(stemmedToken)) {
-					Map <Integer, Integer> docMap = wordMap.get(stemmedToken);
+				if (wordMap.containsKey(token)) {
+					Map <Integer, Integer> docMap = wordMap.get(token);
 					if (docMap.containsKey(docId)) {
 						Integer occurrences = docMap.get(docId);
 						docMap.put(docId, occurrences + 1);
@@ -107,13 +106,13 @@ private void buildMapFromTokens(int docId, List<String> tokens) {
 				} else {
 					Map <Integer, Integer> docMap = new HashMap<Integer, Integer>();
 					docMap.put(docId, 1);
-					wordMap.put(stemmedToken, docMap);
+					wordMap.put(token, docMap);
 				}
 			} else {
 				Map <Integer, Integer> docMap = new HashMap<Integer, Integer>();
 				docMap.put(docId, 1);
 				Map<String, Map<Integer, Integer>> wordMap = new HashMap<String, Map<Integer, Integer>>();
-				wordMap.put(stemmedToken, docMap);
+				wordMap.put(token, docMap);
 				_characterMap.put(start, wordMap);
 			}
 		}
