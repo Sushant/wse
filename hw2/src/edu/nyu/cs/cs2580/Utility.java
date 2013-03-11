@@ -46,6 +46,7 @@ class Utility {
 				set);
 		TokenStream stream = an
 				.tokenStream("FileName", new StringReader(input));
+		an.close();
 		return stream;
 	}
 
