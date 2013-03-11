@@ -1,16 +1,20 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.Vector;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -40,14 +44,23 @@ public class IndexerInvertedDoconly extends Indexer {
 				.getFilesInDirectory(_options._corpusPrefix);
 		int counter = 0;
 		Map<Character, Map<String, List<Integer>>> characterMap = new HashMap<Character, Map<String, List<Integer>>>();
+		int docId = 0;
 		for (String file : files) {
 			counter++;
 			String url = _options._corpusPrefix + "/" + file;
 			String document = Utility.extractText(url);
 			List<String> tokens = Utility.tokenize(document);
-			int docId = _documents.size();
+			System.out.println("DocId : " + docId);
 			DocumentIndexed doc = new DocumentIndexed(docId);
+			Map<String, Integer> termFrequency = new HashMap<String, Integer>();
 			for (String stemmedToken : tokens) {
+				if (termFrequency.containsKey(stemmedToken)) {
+					int value = termFrequency.get(stemmedToken);
+					value++;
+					termFrequency.put(stemmedToken, value);
+				} else {
+					termFrequency.put(stemmedToken, 1);
+				}
 				char start = stemmedToken.charAt(0);
 				if (characterMap.containsKey(start)) {
 					Map<String, List<Integer>> tempMap = characterMap
@@ -71,10 +84,18 @@ public class IndexerInvertedDoconly extends Indexer {
 					characterMap.put(start, tempMap);
 				}
 			}
+			if (counter % 300 == 0) {
+				_persistentStore.saveDoc(
+						_options._indexPrefix + "/" + String.valueOf(counter),
+						_documents);
+				_documents.clear();
+			}
 			if (counter % 1000 == 0) {
 				writeFile(characterMap);
 				characterMap.clear();
 			}
+			docId++;
+			doc.setTermFrequency(termFrequency);
 			_documents.add(doc);
 		}
 		if (!characterMap.isEmpty()) {
@@ -87,12 +108,14 @@ public class IndexerInvertedDoconly extends Indexer {
 	private void mergeAll() throws IOException {
 		List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
 		for (String file : files) {
-			System.out.println("Merging... " + file);
-			Map<Character, Map<String, List<Integer>>> characterMap = readAll(file);
-			String fileName = _options._indexPrefix + "/" + file;
-			File charFile = new File(fileName);
-			charFile.delete();
-			writeFile(characterMap);
+			if (file.length() == 1) {
+				System.out.println("Merging... " + file);
+				Map<Character, Map<String, List<Integer>>> characterMap = readAll(file);
+				String fileName = _options._indexPrefix + "/" + file;
+				File charFile = new File(fileName);
+				charFile.delete();
+				writeFile(characterMap);
+			}
 		}
 	}
 
@@ -153,15 +176,98 @@ public class IndexerInvertedDoconly extends Indexer {
 
 	@Override
 	public Document getDoc(int docid) {
-		SearchEngine.Check(false, "Do NOT change, not used for this Indexer!");
+		try {
+			int quotient = docid / 300;
+			int remainder = docid % 300;
+			int docFile = (quotient + 1) * 300;
+			String fileName = _options._indexPrefix + "/" + docFile;
+			List<Document> docs = _persistentStore.loadDoc(fileName);
+			return docs.get(remainder);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		return null;
 	}
 
 	/**
 	 * In HW2, you should be using {@link DocumentIndexed}
+	 * 
+	 * @throws Exception
 	 */
 	@Override
 	public Document nextDoc(Query query, int docid) {
+		try {
+			query.processQuery();
+			List<String> queryVector = query._tokens;
+			Map<String, List<Integer>> queryMap = new HashMap<String, List<Integer>>();
+			List<List<Integer>> list = new ArrayList<List<Integer>>();
+			for (String search : queryVector) {
+				String fileName = _options._indexPrefix + "/"
+						+ search.charAt(0);
+				System.out.println(fileName);
+				String cmd = "grep '\\<" + search + "\\>' " + fileName;
+				List<String> commands = new ArrayList<String>();
+				commands.add("/bin/bash");
+				commands.add("-c");
+				commands.add(cmd);
+				ProcessBuilder pb = new ProcessBuilder(commands);
+				Process p;
+				p = pb.start();
+				InputStreamReader isr = new InputStreamReader(
+						p.getInputStream());
+				BufferedReader br = new BufferedReader(isr);
+				String s[];
+				String line = br.readLine();
+				s = line.split(" ");
+				System.out.println("S size --> " + s.length);
+				List<Integer> tempList = new ArrayList<Integer>();
+				for (int i = 1; i < s.length; i++) {
+					tempList.add(Integer.parseInt(s[i]));
+				}
+				list.add(tempList);
+			}
+			System.out.println("List Size --> " + list.size());
+			if (list.size() == 1) {
+				int index = list.get(0).indexOf((docid));
+				if (index + 1 <= list.get(0).size() - 1) {
+					return getDoc(list.get(0).get(index + 1));
+				} else {
+					return null;
+				}
+			}
+			int min = Integer.MAX_VALUE;
+			int index = Integer.MAX_VALUE;
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i).size() < min) {
+					min = list.get(i).size();
+					index = i;
+				}
+			}
+			List<Integer> tempInteger = list.get(index);
+			System.out.println("List before-->" + list.size());
+			list.remove(index);
+			System.out.println("List after-->" + list.size());
+			System.out.println(list);
+			System.out.println(tempInteger);
+			System.out.println("Doc Id" + docid);
+			int index1 = tempInteger.indexOf(docid);
+			System.out.println("Index1 --> " + index1);
+			for (int i = index1 + 1; i < tempInteger.size(); i++) {
+				boolean flag = false;
+				for (List<Integer> tempList1 : list) {
+					flag = tempList1.contains(tempInteger.get(i));
+					if (!flag) {
+						break;
+					}
+				}
+				if (flag) {
+					return getDoc(tempInteger.get(i));
+				}
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		return null;
 	}
 
@@ -186,8 +292,16 @@ public class IndexerInvertedDoconly extends Indexer {
 		IndexerInvertedDoconly in = new IndexerInvertedDoconly(option);
 		Date d = new Date();
 		in.constructIndex();
+		//Query query = new Query("arthur answer");
+		//Document doc = in.nextDoc(query, 985);
+		//System.out.println(doc._docid);
 		Date d1 = new Date();
 		System.out.println(d);
 		System.out.println(d1);
+
+
+
+		
+
 	}
 }

@@ -18,6 +18,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 	// Stores all Document in memory.
 	final int BULK_DOC_PROCESSING_SIZE = 300;
 	final int BULK_DOC_WRITE_SIZE = 100;
+	final String METADATA_FILE = "index.dat";
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<String, Map<String, Map<Integer, List<Integer>>>> _characterMap;
 	
@@ -35,10 +36,11 @@ public class IndexerInvertedOccurrence extends Indexer {
 		  if (_documents.size() % BULK_DOC_PROCESSING_SIZE == 0) {
 			  System.out.println("Processed files: " + _documents.size());
 			  updateIndexWithMap(_characterMap);
-			  _characterMap = new HashMap<String, Map<String, Map<Integer, List<Integer>>>>();
+			  _characterMap.clear();
 		  }
 	  }
-	  if (_characterMap != null) {
+	  // Update index with all the remaining files from corpus
+	  if (_characterMap != null) { 
 		  updateIndexWithMap(_characterMap);
 	  }
 	  saveIndexMetadata();
@@ -50,7 +52,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 	Map<String, Long> dataMap = new HashMap<String, Long>();
 	dataMap.put("numDocs", new Long(_numDocs));
 	dataMap.put("totalTermFrequency", _totalTermFrequency);
-	String metaDataFile = _options._indexPrefix + "/index.dat";
+	String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
 	_persistentStore.saveIndexMetadata(metaDataFile, dataMap);
   }
 

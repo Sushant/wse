@@ -10,7 +10,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -74,6 +73,18 @@ public class PersistentStore {
 			loadedWordMap.put(word, docMap);
 			save(filepath, loadedWordMap);
 	}*/
+	
+	public void saveDoc(String filePath, List<Document> doc) throws IOException {
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath));
+		_gson.toJson(doc, writer);
+		writer.close();
+	}
+	
+	public List<Document> loadDoc(String filePath) throws IOException {
+		Reader reader = new InputStreamReader(new FileInputStream(filePath));
+		List<Document> docList = _gson.fromJson(reader, new TypeToken<List<Document>>() {}.getType());
+		return docList;
+	}
 	
 	public void saveIndexMetadata(String filepath, Map<String, Long> dataMap) throws IOException {
 		Writer writer = new OutputStreamWriter(new FileOutputStream(filepath));
