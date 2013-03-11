@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -31,84 +32,107 @@ public class IndexerInvertedDoconly extends Indexer {
 	// is
 	// the number of times the term appears in the corpus.
 	private Map<String, Integer> _termCorpusFrequency = new HashMap<String, Integer>();
+	
+	final int BULK_DOC_PROCESSING_SIZE = 1000;
+	final int BULK_DOC_WRITE_SIZE = 300;
+	final String METADATA_FILE = "index.dat";
 	private Vector<Document> _documents = new Vector<Document>();
+	private Map<Character, Map<String, List<Integer>>> _characterMap;
 
 	public IndexerInvertedDoconly(Options options) {
 		super(options);
+		 _characterMap = new HashMap<Character, Map<String, List<Integer>>>();
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
 	@Override
 	public void constructIndex() throws IOException {
-		List<String> files = Utility
-				.getFilesInDirectory(_options._corpusPrefix);
-		int counter = 0;
-		Map<Character, Map<String, List<Integer>>> characterMap = new HashMap<Character, Map<String, List<Integer>>>();
-		int docId = 0;
-		for (String file : files) {
-			counter++;
-			String url = _options._corpusPrefix + "/" + file;
-			String document = Utility.extractText(url);
-			List<String> tokens = Utility.tokenize(document);
-			System.out.println("DocId : " + docId);
-			DocumentIndexed doc = new DocumentIndexed(docId);
-			Map<String, Integer> termFrequency = new HashMap<String, Integer>();
-			for (String stemmedToken : tokens) {
-				if (termFrequency.containsKey(stemmedToken)) {
-					int value = termFrequency.get(stemmedToken);
-					value++;
-					termFrequency.put(stemmedToken, value);
-				} else {
-					termFrequency.put(stemmedToken, 1);
-				}
-				char start = stemmedToken.charAt(0);
-				if (characterMap.containsKey(start)) {
-					Map<String, List<Integer>> tempMap = characterMap
-							.get(start);
-					if (tempMap.containsKey(stemmedToken)) {
-						List<Integer> tempList = tempMap.get(stemmedToken);
-						if (!tempList.contains(docId)) {
-							tempList.add(docId);
-						}
-						tempMap.put(stemmedToken, tempList);
-					} else {
-						List<Integer> tempList = new ArrayList<Integer>();
-						tempList.add(docId);
-						tempMap.put(stemmedToken, tempList);
-					}
-				} else {
-					Map<String, List<Integer>> tempMap = new HashMap<String, List<Integer>>();
-					List<Integer> tempList = new ArrayList<Integer>();
-					tempList.add(docId);
-					tempMap.put(stemmedToken, tempList);
-					characterMap.put(start, tempMap);
-				}
-			}
-			if (counter % 300 == 0) {
-				_persistentStore.saveDoc(
-						_options._indexPrefix + "/" + String.valueOf(counter),
-						_documents);
+		List<String> documents = Utility.getFilesInDirectory(_options._corpusPrefix);
+
+		for (String filename: documents) {
+			processDocument(filename);
+			if (_numDocs % BULK_DOC_WRITE_SIZE == 0) {
+				_persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
 				_documents.clear();
 			}
-			if (counter % 1000 == 0) {
-				writeFile(characterMap);
-				characterMap.clear();
+			if (_numDocs % BULK_DOC_PROCESSING_SIZE == 0) {
+				writeFile(_characterMap);
+				_characterMap.clear();
 			}
-			docId++;
-			doc.setTermFrequency(termFrequency);
-			_documents.add(doc);
 		}
-		if (!characterMap.isEmpty()) {
-			writeFile(characterMap);
-			characterMap.clear();
+		if (!_characterMap.isEmpty()) {
+			writeFile(_characterMap);
+			_characterMap.clear();
 		}
+		_persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
 		mergeAll();
+		_documents.clear();
+		saveIndexMetadata();
+		System.out.println("Indexed " + Integer.toString(_numDocs) + " docs with " +
+		        Long.toString(_totalTermFrequency) + " terms.");
+	}
+	
+	  private void saveIndexMetadata() throws IOException {
+			Map<String, Long> dataMap = new HashMap<String, Long>();
+			dataMap.put("numDocs", new Long(_numDocs));
+			dataMap.put("totalTermFrequency", _totalTermFrequency);
+			String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
+			_persistentStore.saveIndexMetadata(metaDataFile, dataMap);
+		  }
+	
+	private void processDocument(String filename) throws MalformedURLException, IOException {
+		String corpusFile = _options._corpusPrefix + "/" + filename;
+		int docId = _numDocs;
+		String document = Utility.extractText(corpusFile);
+		List<String> stemmedTokens = Utility.tokenize(document);
+		buildMapFromTokens(docId, stemmedTokens);
+		_numDocs++;
+	}
+
+	private void buildMapFromTokens(int docId, List<String> stemmedTokens) {
+		System.out.println("DocId : " + docId);
+		DocumentIndexed doc = new DocumentIndexed(docId);
+		Map<String, Integer> termFrequency = new HashMap<String, Integer>();
+		for (String stemmedToken : stemmedTokens) {
+			if (termFrequency.containsKey(stemmedToken)) {
+				int value = termFrequency.get(stemmedToken);
+				value++;
+				termFrequency.put(stemmedToken, value);
+			} else {
+				termFrequency.put(stemmedToken, 1);
+			}
+			char start = stemmedToken.charAt(0);
+			if (_characterMap.containsKey(start)) {
+				Map<String, List<Integer>> wordMap = _characterMap.get(start);
+				if (wordMap.containsKey(stemmedToken)) {
+					List<Integer> docList = wordMap.get(stemmedToken);
+					if (!docList.contains(docId)) {
+						docList.add(docId);
+					}
+					wordMap.put(stemmedToken, docList);
+				} else {
+					List<Integer> tempList = new ArrayList<Integer>();
+					tempList.add(docId);
+					wordMap.put(stemmedToken, tempList);
+				}
+			} else {
+				Map<String, List<Integer>> tempMap = new HashMap<String, List<Integer>>();
+				List<Integer> tempList = new ArrayList<Integer>();
+				tempList.add(docId);
+				tempMap.put(stemmedToken, tempList);
+				_characterMap.put(start, tempMap);
+			}
+		}
+		_totalTermFrequency = _totalTermFrequency + stemmedTokens.size();
+		doc.setTermFrequency(termFrequency);
+		_documents.add(doc);
 	}
 
 	private void mergeAll() throws IOException {
 		List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
+		System.out.println("Files: " + files);
 		for (String file : files) {
-			if (file.length() == 1) {
+			if (file.endsWith(".idx")) {
 				System.out.println("Merging... " + file);
 				Map<Character, Map<String, List<Integer>>> characterMap = readAll(file);
 				String fileName = _options._indexPrefix + "/" + file;
@@ -150,7 +174,7 @@ public class IndexerInvertedDoconly extends Indexer {
 			throws IOException {
 		for (Map.Entry<Character, Map<String, List<Integer>>> entry : characterMap
 				.entrySet()) {
-			String path = _options._indexPrefix + "/" + entry.getKey();
+			String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 			File file = new File(path);
 			OutputStream out = new FileOutputStream(file, true);
 			Map<String, List<Integer>> tempMap = entry.getValue();
@@ -172,8 +196,16 @@ public class IndexerInvertedDoconly extends Indexer {
 
 	@Override
 	public void loadIndex() throws IOException, ClassNotFoundException {
+		loadIndexMetadata();
 	}
 
+	private void loadIndexMetadata() throws IOException {
+		 String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
+		 Map<String, Long> dataMap = _persistentStore.loadIndexMetadata(metaDataFile);
+		 _totalTermFrequency = dataMap.get("totalTermFrequency");
+		 _numDocs = dataMap.get("numDocs").intValue();
+	  }
+	
 	@Override
 	public Document getDoc(int docid) {
 		try {
