@@ -38,10 +38,12 @@ public class IndexerInvertedDoconly extends Indexer {
 	final String METADATA_FILE = "index.dat";
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<Character, Map<String, List<Integer>>> _characterMap;
+	private Map<String, Long> _docMap;
 
 	public IndexerInvertedDoconly(Options options) {
 		super(options);
 		 _characterMap = new HashMap<Character, Map<String, List<Integer>>>();
+		 _docMap = new HashMap<String, Long>();
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
@@ -64,7 +66,10 @@ public class IndexerInvertedDoconly extends Indexer {
 			writeFile(_characterMap);
 			_characterMap.clear();
 		}
-		_persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
+		if (!_documents.isEmpty()) {
+			  _persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
+			  _documents.clear();
+		}
 		mergeAll();
 		_documents.clear();
 		saveIndexMetadata();
@@ -72,24 +77,25 @@ public class IndexerInvertedDoconly extends Indexer {
 		        Long.toString(_totalTermFrequency) + " terms.");
 	}
 	
-	  private void saveIndexMetadata() throws IOException {
-			Map<String, Long> dataMap = new HashMap<String, Long>();
-			dataMap.put("numDocs", new Long(_numDocs));
-			dataMap.put("totalTermFrequency", _totalTermFrequency);
-			String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
-			_persistentStore.saveIndexMetadata(metaDataFile, dataMap);
-		  }
+	private void saveIndexMetadata() throws IOException {
+		Map<String, Long> dataMap = new HashMap<String, Long>();
+		dataMap.put("numDocs", new Long(_numDocs));
+		dataMap.put("totalTermFrequency", _totalTermFrequency);
+		dataMap.putAll(_docMap);
+		String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
+		_persistentStore.saveIndexMetadata(metaDataFile, dataMap);
+	}
 	
 	private void processDocument(String filename) throws MalformedURLException, IOException {
 		String corpusFile = _options._corpusPrefix + "/" + filename;
 		int docId = _numDocs;
 		String document = Utility.extractText(corpusFile);
 		List<String> stemmedTokens = Utility.tokenize(document);
-		buildMapFromTokens(docId, stemmedTokens);
+		buildMapFromTokens(docId, filename, stemmedTokens);
 		_numDocs++;
 	}
 
-	private void buildMapFromTokens(int docId, List<String> stemmedTokens) {
+	private void buildMapFromTokens(int docId, String docName, List<String> stemmedTokens) {
 		System.out.println("DocId : " + docId);
 		DocumentIndexed doc = new DocumentIndexed(docId);
 		Map<String, Integer> termFrequency = new HashMap<String, Integer>();
@@ -125,6 +131,7 @@ public class IndexerInvertedDoconly extends Indexer {
 		}
 		_totalTermFrequency = _totalTermFrequency + stemmedTokens.size();
 		doc.setTermFrequency(termFrequency);
+		doc.setUrl(docName);
 		_documents.add(doc);
 	}
 
@@ -200,11 +207,13 @@ public class IndexerInvertedDoconly extends Indexer {
 	}
 
 	private void loadIndexMetadata() throws IOException {
-		 String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
-		 Map<String, Long> dataMap = _persistentStore.loadIndexMetadata(metaDataFile);
-		 _totalTermFrequency = dataMap.get("totalTermFrequency");
-		 _numDocs = dataMap.get("numDocs").intValue();
-	  }
+		String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
+		_docMap = _persistentStore.loadIndexMetadata(metaDataFile);
+		_totalTermFrequency = _docMap.get("totalTermFrequency");
+		_docMap.remove("totalTermFrequency");
+		_numDocs = _docMap.get("numDocs").intValue();
+		_docMap.remove("numDocs");
+	}
 	
 	@Override
 	public Document getDoc(int docid) {
