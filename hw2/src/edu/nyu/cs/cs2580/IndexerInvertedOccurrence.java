@@ -21,10 +21,12 @@ public class IndexerInvertedOccurrence extends Indexer {
 	final String METADATA_FILE = "index.dat";
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<String, Map<String, Map<Integer, List<Integer>>>> _characterMap;
+	private Map<String, Long> _docMap;
 	
   public IndexerInvertedOccurrence(Options options) {
     super(options);
     _characterMap = new HashMap<String, Map<String, Map<Integer, List<Integer>>>>();
+    _docMap = new HashMap<String, Long>();
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
   }
 
@@ -33,15 +35,16 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  List<String> documents = Utility.getFilesInDirectory(_options._corpusPrefix);
 	  for (String filename: documents) {
 		  processDocument(filename);
-		  if (_documents.size() % BULK_DOC_PROCESSING_SIZE == 0) {
-			  System.out.println("Processed files: " + _documents.size());
+		  if (_numDocs % BULK_DOC_PROCESSING_SIZE == 0) {
+			  System.out.println("Processed files: " + _numDocs);
 			  updateIndexWithMap(_characterMap);
 			  _characterMap.clear();
 		  }
 	  }
 	  // Update index with all the remaining files from corpus
-	  if (_characterMap != null) { 
+	  if (!_characterMap.isEmpty()) { 
 		  updateIndexWithMap(_characterMap);
+		  _characterMap.clear();
 	  }
 	  saveIndexMetadata();
 	  System.out.println("Indexed " + Integer.toString(_numDocs) + " docs with " +
@@ -52,25 +55,26 @@ public class IndexerInvertedOccurrence extends Indexer {
 	Map<String, Long> dataMap = new HashMap<String, Long>();
 	dataMap.put("numDocs", new Long(_numDocs));
 	dataMap.put("totalTermFrequency", _totalTermFrequency);
+	dataMap.putAll(_docMap);
 	String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
 	_persistentStore.saveIndexMetadata(metaDataFile, dataMap);
   }
 
   private void processDocument(String filename) throws MalformedURLException, IOException {
 	  String corpusFile = _options._corpusPrefix + "/" + filename;
-	  
-	  int docId = _documents.size();
-	  String document;
-	  document = Utility.extractText(corpusFile);
+	  int docId = _numDocs;
+	  String document = Utility.extractText(corpusFile);
 	  List<String> stemmedTokens = Utility.tokenize(document);
 	  buildMapFromTokens(docId, stemmedTokens);
-	  _documents.add(new DocumentIndexed(docId));
+	  //DocumentIndexed doc = new DocumentIndexed(docId);
+	  //_documents.add(doc);
+	  _docMap.put(filename, new Long(docId));
 	  _numDocs++;
   }
   
   private void updateIndexWithMap(Map<String, Map<String, Map<Integer, List<Integer>>>> characterMap) {
 	for (String chars : characterMap.keySet()) {
-		Integer docBatch = _documents.size() / BULK_DOC_PROCESSING_SIZE;
+		Integer docBatch = _numDocs / BULK_DOC_PROCESSING_SIZE;
 		String filename = chars + docBatch.toString();
 		String indexFile = _options._indexPrefix + "/" + filename + ".idx";
 		Map<String, Map<Integer, List<Integer>>> wordMap = characterMap.get(chars);
@@ -145,10 +149,12 @@ public class IndexerInvertedOccurrence extends Indexer {
   }
 
   private void loadIndexMetadata() throws IOException {
-	 String metaDataFile = _options._indexPrefix + "/index.dat";
-	 Map<String, Long> dataMap = _persistentStore.loadIndexMetadata(metaDataFile);
-	 _totalTermFrequency = dataMap.get("totalTermFrequency");
-	 _numDocs = dataMap.get("numDocs").intValue();
+	 String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
+	 _docMap = _persistentStore.loadIndexMetadata(metaDataFile);
+	 _totalTermFrequency = _docMap.get("totalTermFrequency");
+	 _docMap.remove("totalTermFrequency");
+	 _numDocs = _docMap.get("numDocs").intValue();
+	 _docMap.remove("numDocs");
   }
 
 @Override
@@ -162,22 +168,99 @@ public class IndexerInvertedOccurrence extends Indexer {
    */
   @Override
   public Document nextDoc(Query query, int docid) {
+	  query.processQuery();
+	  List<String> queryVector = query._tokens;
     return null;
   }
 
   @Override
+  //Number of documents in which {@code term} appeared, over the full corpus.
   public int corpusDocFrequencyByTerm(String term) {
-    return 0;
+	  int corpusFrequency = 0;
+	  String prefix = getTermPrefix(term);
+	  List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
+	  
+	  for (String docName: matchingDocs) {
+		  String docPath = _options._indexPrefix + "/" + docName;
+		  try {
+			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
+			if (wordMap.containsKey(term)) {
+				corpusFrequency += wordMap.get(term).size();
+			}
+		  } catch (IOException e) {
+			continue;
+		  }
+	  }
+	  return corpusFrequency;
   }
 
   @Override
+  //Number of times {@code term} appeared in corpus.
   public int corpusTermFrequency(String term) {
-    return 0;
+	  int corpusTermFrequency = 0;
+	  String prefix = getTermPrefix(term);
+	  List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
+	  
+	  for (String docName: matchingDocs) {
+		  String docPath = _options._indexPrefix + "/" + docName;
+		  try {
+			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
+			if (wordMap.containsKey(term)) {
+				Map<Integer, List<Integer>> docMap = wordMap.get(term);
+				for (Integer docId: docMap.keySet()) {
+					corpusTermFrequency += docMap.get(docId).size();
+				}
+			}
+		} catch (IOException e) {
+			continue;
+		}
+	  }
+	  return corpusTermFrequency;
+  }
+  
+  private String getTermPrefix(String term) {
+	  if (term.length() >= 2) {
+		  return term.substring(0, 2);
+	  } else {
+	  	  return term.substring(0, 1);
+	  }
   }
 
   @Override
+  //Number of times {@code term} appeared in the document {@code url}.
   public int documentTermFrequency(String term, String url) {
-    SearchEngine.Check(false, "Not implemented!");
-    return 0;
+    int docTermFrequency = 0;
+    if (_docMap.containsKey(url)) {
+    	int docId = _docMap.get(url).intValue();
+    	System.out.println("Doc ID: " + docId);
+    	String prefix = getTermPrefix(term);
+  	  	List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
+  	  
+  	  	for (String docName: matchingDocs) {
+  		  String docPath = _options._indexPrefix + "/" + docName;
+  		  try {
+  			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
+  			if (wordMap.containsKey(term)) {
+  				Map<Integer, List<Integer>> docMap = wordMap.get(term);
+  				if (docMap.containsKey(docId)) {
+  					docTermFrequency += docMap.get(docId).size();
+  					System.out.println("Size: " + docMap.get(docId).size());
+  					break;
+  				}
+  			}
+  		  } catch (IOException e) {
+  			continue;
+  		  }
+  	  	}
+    }
+    return docTermFrequency;
+  }
+  
+  public static void main(String[] args) throws IOException, ClassNotFoundException {
+	Options option = new Options("conf/engine.conf");
+	IndexerInvertedOccurrence in = new IndexerInvertedOccurrence(option);
+	in.loadIndex();
+	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
+	System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
   }
 }
