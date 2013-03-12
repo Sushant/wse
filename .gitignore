@@ -18,3 +18,17 @@ bin
 # Package Files #
 *.war
 *.ear
+
+hw2/lucene-core-3.6.2.jar
+
+hw2/lucene-analyzers-3.6.2.jar
+
+hw2/lucene-analyzers-3.1.0.jar
+
+hw2/jericho-html-3.1.jar
+
+hw2/gson-2.2.2.jar
+
+hw2/grep4j-1.7.5.jar
+
+hw2/grep4j-1.6.5.jar

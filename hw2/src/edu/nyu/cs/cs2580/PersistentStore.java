@@ -80,9 +80,9 @@ public class PersistentStore {
 		writer.close();
 	}
 	
-	public List<Document> loadDoc(String filePath) throws IOException {
+	public List<DocumentIndexed> loadDoc(String filePath) throws IOException {
 		Reader reader = new InputStreamReader(new FileInputStream(filePath));
-		List<Document> docList = _gson.fromJson(reader, new TypeToken<List<Document>>() {}.getType());
+		List<DocumentIndexed> docList = _gson.fromJson(reader, new TypeToken<List<DocumentIndexed>>() {}.getType());
 		return docList;
 	}
 	

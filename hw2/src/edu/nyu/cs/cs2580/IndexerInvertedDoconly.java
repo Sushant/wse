@@ -22,24 +22,17 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW2.
  */
 public class IndexerInvertedDoconly extends Indexer {
-	// Term document frequency, key is the integer representation of the term
-	// and
-	// value is the number of documents the term appears in.
-	private Map<String, Integer> _termDocFrequency = new HashMap<String, Integer>();
-	// Term frequency, key is the integer representation of the term and value
-	// is
-	// the number of times the term appears in the corpus.
-	private Map<String, Integer> _termCorpusFrequency = new HashMap<String, Integer>();
-	
 	final int BULK_DOC_PROCESSING_SIZE = 1000;
 	final int BULK_DOC_WRITE_SIZE = 300;
 	final String METADATA_FILE = "index.dat";
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<Character, Map<String, List<Integer>>> _characterMap;
+	private Map<String, Long> _docMap;
 
 	public IndexerInvertedDoconly(Options options) {
 		super(options);
 		 _characterMap = new HashMap<Character, Map<String, List<Integer>>>();
+		 _docMap = new HashMap<String, Long>();
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
@@ -62,7 +55,10 @@ public class IndexerInvertedDoconly extends Indexer {
 			writeFile(_characterMap);
 			_characterMap.clear();
 		}
-		_persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
+		if (!_documents.isEmpty()) {
+			  _persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
+			  _documents.clear();
+		}
 		mergeAll();
 		_documents.clear();
 		saveIndexMetadata();
@@ -70,24 +66,25 @@ public class IndexerInvertedDoconly extends Indexer {
 		        Long.toString(_totalTermFrequency) + " terms.");
 	}
 	
-	  private void saveIndexMetadata() throws IOException {
-			Map<String, Long> dataMap = new HashMap<String, Long>();
-			dataMap.put("numDocs", new Long(_numDocs));
-			dataMap.put("totalTermFrequency", _totalTermFrequency);
-			String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
-			_persistentStore.saveIndexMetadata(metaDataFile, dataMap);
-		  }
+	private void saveIndexMetadata() throws IOException {
+		Map<String, Long> dataMap = new HashMap<String, Long>();
+		dataMap.put("numDocs", new Long(_numDocs));
+		dataMap.put("totalTermFrequency", _totalTermFrequency);
+		dataMap.putAll(_docMap);
+		String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
+		_persistentStore.saveIndexMetadata(metaDataFile, dataMap);
+	}
 	
 	private void processDocument(String filename) throws MalformedURLException, IOException {
 		String corpusFile = _options._corpusPrefix + "/" + filename;
 		int docId = _numDocs;
 		String document = Utility.extractText(corpusFile);
 		List<String> stemmedTokens = Utility.tokenize(document);
-		buildMapFromTokens(docId, stemmedTokens);
+		buildMapFromTokens(docId, filename, stemmedTokens);
 		_numDocs++;
 	}
 
-	private void buildMapFromTokens(int docId, List<String> stemmedTokens) {
+	private void buildMapFromTokens(int docId, String docName, List<String> stemmedTokens) {
 		System.out.println("DocId : " + docId);
 		DocumentIndexed doc = new DocumentIndexed(docId);
 		Map<String, Integer> termFrequency = new HashMap<String, Integer>();
@@ -122,7 +119,10 @@ public class IndexerInvertedDoconly extends Indexer {
 			}
 		}
 		_totalTermFrequency = _totalTermFrequency + stemmedTokens.size();
-		doc.setTermFrequency(termFrequency);
+		doc.setTermFrequencyMap(termFrequency);
+		doc.setUrl(docName);
+		doc.setTotalWordsInDoc(stemmedTokens.size());
+		_docMap.put(docName, new Long(docId));
 		_documents.add(doc);
 	}
 
@@ -198,20 +198,26 @@ public class IndexerInvertedDoconly extends Indexer {
 	}
 
 	private void loadIndexMetadata() throws IOException {
-		 String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
-		 Map<String, Long> dataMap = _persistentStore.loadIndexMetadata(metaDataFile);
-		 _totalTermFrequency = dataMap.get("totalTermFrequency");
-		 _numDocs = dataMap.get("numDocs").intValue();
-	  }
+		String metaDataFile = _options._indexPrefix + "/" + METADATA_FILE;
+		_docMap = _persistentStore.loadIndexMetadata(metaDataFile);
+		_totalTermFrequency = _docMap.get("totalTermFrequency");
+		_docMap.remove("totalTermFrequency");
+		_numDocs = _docMap.get("numDocs").intValue();
+		_docMap.remove("numDocs");
+	}
 	
 	@Override
 	public Document getDoc(int docid) {
+		return getDocumentIndexed(docid);
+	}
+
+	private DocumentIndexed getDocumentIndexed(int docid) {
 		try {
 			int quotient = docid / 300;
 			int remainder = docid % 300;
 			int docFile = (quotient + 1) * 300;
-			String fileName = _options._indexPrefix + "/" + docFile+".dat";
-			List<Document> docs = _persistentStore.loadDoc(fileName);
+			String fileName = _options._indexPrefix + "/" + docFile + ".dat";
+			List<DocumentIndexed> docs = _persistentStore.loadDoc(fileName);
 			return docs.get(remainder);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -229,31 +235,9 @@ public class IndexerInvertedDoconly extends Indexer {
 		try {
 			query.processQuery();
 			List<String> queryVector = query._tokens;
-			Map<String, List<Integer>> queryMap = new HashMap<String, List<Integer>>();
 			List<List<Integer>> list = new ArrayList<List<Integer>>();
 			for (String search : queryVector) {
-				String fileName = _options._indexPrefix + "/"
-						+ search.charAt(0)+".idx";
-				System.out.println(fileName);
-				String cmd = "grep '\\<" + search + "\\>' " + fileName;
-				List<String> commands = new ArrayList<String>();
-				commands.add("/bin/bash");
-				commands.add("-c");
-				commands.add(cmd);
-				ProcessBuilder pb = new ProcessBuilder(commands);
-				Process p;
-				p = pb.start();
-				InputStreamReader isr = new InputStreamReader(
-						p.getInputStream());
-				BufferedReader br = new BufferedReader(isr);
-				String s[];
-				String line = br.readLine();
-				s = line.split(" ");
-				System.out.println("S size --> " + s.length);
-				List<Integer> tempList = new ArrayList<Integer>();
-				for (int i = 1; i < s.length; i++) {
-					tempList.add(Integer.parseInt(s[i]));
-				}
+				List<Integer> tempList = grepFile(search);
 				list.add(tempList);
 			}
 			System.out.println("List Size --> " + list.size());
@@ -301,6 +285,31 @@ public class IndexerInvertedDoconly extends Indexer {
 		return null;
 	}
 
+	private List<Integer> grepFile(String search) throws IOException {
+		String fileName = _options._indexPrefix + "/" + search.charAt(0) + ".idx";
+		System.out.println(fileName);
+		String cmd = "grep '\\<" + search + "\\>' " + fileName;
+		List<String> commands = new ArrayList<String>();
+		commands.add("/bin/bash");
+		commands.add("-c");
+		commands.add(cmd);
+		ProcessBuilder pb = new ProcessBuilder(commands);
+		Process p;
+		p = pb.start();
+		InputStreamReader isr = new InputStreamReader(
+				p.getInputStream());
+		BufferedReader br = new BufferedReader(isr);
+		String s[];
+		String line = br.readLine();
+		s = line.split(" ");
+		System.out.println("S size --> " + s.length);
+		List<Integer> tempList = new ArrayList<Integer>();
+		for (int i = 1; i < s.length; i++) {
+			tempList.add(Integer.parseInt(s[i]));
+		}
+		return tempList;
+	}
+
 	@Override
 	public int corpusDocFrequencyByTerm(String term) {
 		return 0;
@@ -308,13 +317,25 @@ public class IndexerInvertedDoconly extends Indexer {
 
 	@Override
 	public int corpusTermFrequency(String term) {
+		try {
+			List<Integer> tempList = grepFile(term);
+			int termCount = 0;
+			for(Integer docid : tempList){
+				DocumentIndexed doc = getDocumentIndexed(docid);
+				termCount += doc.getTermFrequencyMap().get(term);
+			}
+			return termCount;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return 0;
 	}
 
 	@Override
 	public int documentTermFrequency(String term, String url) {
-		SearchEngine.Check(false, "Not implemented!");
-		return 0;
+		int docid = _docMap.get(url).intValue();
+		return getDocumentIndexed(docid).getTermFrequencyMap().get(term);
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -328,10 +349,6 @@ public class IndexerInvertedDoconly extends Indexer {
 		Date d1 = new Date();
 		System.out.println(d);
 		System.out.println(d1);
-
-
-
-		
-
+		DocumentIndexed inh = new DocumentIndexed(45);
 	}
 }

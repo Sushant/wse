@@ -69,6 +69,19 @@ class Utility {
 		}
 		return files;
 	}
+	
+	public static List<String> getFileInDirectory(String directory, String prefix, String extension) {
+		File folder = new File(directory);
+		List<String> files = new ArrayList<String>();
+		
+		for (final File fileEntry : folder.listFiles()) {
+			String filename = fileEntry.getName();
+			if (filename.endsWith(extension) && filename.startsWith(prefix)) {
+				files.add(filename);
+			}
+		}
+		return files;
+	}
 
 	private static List<Byte> compressByte(Integer input) {
 		String st = Integer.toBinaryString(input);
@@ -276,9 +289,7 @@ class Utility {
 		List<List<Byte>> list1 = createCompressedList(map);
 		System.out.println("CompressList -- " + list1);
 		System.out.println("Decompress -- " + createDecompressedMap(list1));
-			/*System.out.println(Integer.toBinaryString(127896));
-			List<Byte> list = compressByte(127896);
-			System.out.println(decompressFromListOfBytes(list));
-			System.out.println();*/
-		}
+		System.out.println(getFileInDirectory("data/index", "i", "dat"));
+	}
+
 }
