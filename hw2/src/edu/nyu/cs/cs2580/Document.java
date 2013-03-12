@@ -22,7 +22,7 @@ class Document implements Serializable {
   // Basic information for display
   private String _title = "";
   private String _url = "";
-  
+  private int totalWords = 0;
   // Basic information for ranking
   private float _pageRank = 0.0f;
   private int _numViews = 0;
@@ -62,4 +62,12 @@ class Document implements Serializable {
   public void setNumViews(int numViews) {
     this._numViews = numViews;
   }
+	
+	public int getTotalWordsInDoc() {
+		return totalWords;
+	}
+	
+	public void setTotalWordsInDoc(int totalWordsInDoc) {
+		this.totalWords = totalWordsInDoc; 
+	}
 }

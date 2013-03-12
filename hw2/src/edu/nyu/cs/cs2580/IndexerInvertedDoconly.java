@@ -122,6 +122,7 @@ public class IndexerInvertedDoconly extends Indexer {
 		doc.setTermFrequencyMap(termFrequency);
 		doc.setUrl(docName);
 		doc.setTotalWordsInDoc(stemmedTokens.size());
+		_docMap.put(docName, new Long(docId));
 		_documents.add(doc);
 	}
 
@@ -207,12 +208,16 @@ public class IndexerInvertedDoconly extends Indexer {
 	
 	@Override
 	public Document getDoc(int docid) {
+		return getDocumentIndexed(docid);
+	}
+
+	private DocumentIndexed getDocumentIndexed(int docid) {
 		try {
 			int quotient = docid / 300;
 			int remainder = docid % 300;
 			int docFile = (quotient + 1) * 300;
 			String fileName = _options._indexPrefix + "/" + docFile + ".dat";
-			List<Document> docs = _persistentStore.loadDoc(fileName);
+			List<DocumentIndexed> docs = _persistentStore.loadDoc(fileName);
 			return docs.get(remainder);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -232,27 +237,7 @@ public class IndexerInvertedDoconly extends Indexer {
 			List<String> queryVector = query._tokens;
 			List<List<Integer>> list = new ArrayList<List<Integer>>();
 			for (String search : queryVector) {
-				String fileName = _options._indexPrefix + "/" + search.charAt(0) + ".idx";
-				System.out.println(fileName);
-				String cmd = "grep '\\<" + search + "\\>' " + fileName;
-				List<String> commands = new ArrayList<String>();
-				commands.add("/bin/bash");
-				commands.add("-c");
-				commands.add(cmd);
-				ProcessBuilder pb = new ProcessBuilder(commands);
-				Process p;
-				p = pb.start();
-				InputStreamReader isr = new InputStreamReader(
-						p.getInputStream());
-				BufferedReader br = new BufferedReader(isr);
-				String s[];
-				String line = br.readLine();
-				s = line.split(" ");
-				System.out.println("S size --> " + s.length);
-				List<Integer> tempList = new ArrayList<Integer>();
-				for (int i = 1; i < s.length; i++) {
-					tempList.add(Integer.parseInt(s[i]));
-				}
+				List<Integer> tempList = grepFile(search);
 				list.add(tempList);
 			}
 			System.out.println("List Size --> " + list.size());
@@ -300,6 +285,31 @@ public class IndexerInvertedDoconly extends Indexer {
 		return null;
 	}
 
+	private List<Integer> grepFile(String search) throws IOException {
+		String fileName = _options._indexPrefix + "/" + search.charAt(0) + ".idx";
+		System.out.println(fileName);
+		String cmd = "grep '\\<" + search + "\\>' " + fileName;
+		List<String> commands = new ArrayList<String>();
+		commands.add("/bin/bash");
+		commands.add("-c");
+		commands.add(cmd);
+		ProcessBuilder pb = new ProcessBuilder(commands);
+		Process p;
+		p = pb.start();
+		InputStreamReader isr = new InputStreamReader(
+				p.getInputStream());
+		BufferedReader br = new BufferedReader(isr);
+		String s[];
+		String line = br.readLine();
+		s = line.split(" ");
+		System.out.println("S size --> " + s.length);
+		List<Integer> tempList = new ArrayList<Integer>();
+		for (int i = 1; i < s.length; i++) {
+			tempList.add(Integer.parseInt(s[i]));
+		}
+		return tempList;
+	}
+
 	@Override
 	public int corpusDocFrequencyByTerm(String term) {
 		return 0;
@@ -307,13 +317,25 @@ public class IndexerInvertedDoconly extends Indexer {
 
 	@Override
 	public int corpusTermFrequency(String term) {
+		try {
+			List<Integer> tempList = grepFile(term);
+			int termCount = 0;
+			for(Integer docid : tempList){
+				DocumentIndexed doc = getDocumentIndexed(docid);
+				termCount += doc.getTermFrequencyMap().get(term);
+			}
+			return termCount;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return 0;
 	}
 
 	@Override
 	public int documentTermFrequency(String term, String url) {
-		SearchEngine.Check(false, "Not implemented!");
-		return 0;
+		int docid = _docMap.get(url).intValue();
+		return getDocumentIndexed(docid).getTermFrequencyMap().get(term);
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -327,5 +349,6 @@ public class IndexerInvertedDoconly extends Indexer {
 		Date d1 = new Date();
 		System.out.println(d);
 		System.out.println(d1);
+		DocumentIndexed inh = new DocumentIndexed(45);
 	}
 }

@@ -10,7 +10,7 @@ import java.util.Map;
 public class DocumentIndexed extends Document {
 	private static final long serialVersionUID = 9184892508124423115L;
 	private Map<String, Integer> termFrequencyMap = new HashMap<String, Integer>();
-	private int totalWords = 0;
+	
 
 	public Map<String, Integer> getTermFrequencyMap() {
 		return termFrequencyMap;
@@ -22,13 +22,5 @@ public class DocumentIndexed extends Document {
 	
 	public DocumentIndexed(int docid) {
 		super(docid);
-	}
-	
-	public int getTotalWordsInDoc() {
-		return totalWords;
-	}
-	
-	public void setTotalWordsInDoc(int totalWordsInDoc) {
-		this.totalWords = totalWordsInDoc; 
 	}
 }
