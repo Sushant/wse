@@ -73,11 +73,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  int docId = _numDocs;
 	  String document = Utility.extractText(corpusFile);
 	  List<String> stemmedTokens = Utility.tokenize(document);
-	  buildMapFromTokens(docId, stemmedTokens);
-	  DocumentIndexed doc = new DocumentIndexed(docId);
-	  doc.setUrl(filename);
-	  _documents.add(doc);
-	  _docMap.put(filename, new Long(docId));
+	  buildMapFromTokens(docId, filename, stemmedTokens);
 	  _numDocs++;
   }
   
@@ -112,7 +108,7 @@ public class IndexerInvertedOccurrence extends Indexer {
   }
   
 
-  private void buildMapFromTokens(int docId, List<String> tokens) {
+  private void buildMapFromTokens(int docId, String docName, List<String> tokens) {
 	  int tokenIndex = 0;
 	  for(String token : tokens){
 		  String start;
@@ -145,7 +141,12 @@ public class IndexerInvertedOccurrence extends Indexer {
 				_characterMap.put(start, wordMap);
 			}
 			tokenIndex++;
-		}
+	  }
+	  DocumentIndexed doc = new DocumentIndexed(docId);
+	  doc.setUrl(docName);
+	  doc.setTotalWordsInDoc(tokens.size());
+	  _documents.add(doc);
+	  _docMap.put(docName, new Long(docId));
 	  _totalTermFrequency = _totalTermFrequency + tokens.size();
   }
 
@@ -178,7 +179,7 @@ public class IndexerInvertedOccurrence extends Indexer {
   @Override
   public Document nextDoc(Query query, int docid) {
 	  query.processQuery();
-	  List<String> queryVector = query._tokens;
+	List<String> queryVector = query._tokens;
     return null;
   }
 

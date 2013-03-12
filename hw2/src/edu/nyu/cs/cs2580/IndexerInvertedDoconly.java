@@ -22,15 +22,6 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW2.
  */
 public class IndexerInvertedDoconly extends Indexer {
-	// Term document frequency, key is the integer representation of the term
-	// and
-	// value is the number of documents the term appears in.
-	private Map<String, Integer> _termDocFrequency = new HashMap<String, Integer>();
-	// Term frequency, key is the integer representation of the term and value
-	// is
-	// the number of times the term appears in the corpus.
-	private Map<String, Integer> _termCorpusFrequency = new HashMap<String, Integer>();
-	
 	final int BULK_DOC_PROCESSING_SIZE = 1000;
 	final int BULK_DOC_WRITE_SIZE = 300;
 	final String METADATA_FILE = "index.dat";
@@ -128,8 +119,9 @@ public class IndexerInvertedDoconly extends Indexer {
 			}
 		}
 		_totalTermFrequency = _totalTermFrequency + stemmedTokens.size();
-		doc.setTermFrequency(termFrequency);
+		doc.setTermFrequencyMap(termFrequency);
 		doc.setUrl(docName);
+		doc.setTotalWordsInDoc(stemmedTokens.size());
 		_documents.add(doc);
 	}
 
@@ -238,7 +230,6 @@ public class IndexerInvertedDoconly extends Indexer {
 		try {
 			query.processQuery();
 			List<String> queryVector = query._tokens;
-			Map<String, List<Integer>> queryMap = new HashMap<String, List<Integer>>();
 			List<List<Integer>> list = new ArrayList<List<Integer>>();
 			for (String search : queryVector) {
 				String fileName = _options._indexPrefix + "/" + search.charAt(0) + ".idx";
