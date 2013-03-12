@@ -272,7 +272,6 @@ class Utility {
 		tempList = new ArrayList<Integer>();
 		tempList.add(1);
 		map.put(3, tempList);
-
 		System.out.println("Map -- " + map);
 		List<List<Byte>> list1 = createCompressedList(map);
 		System.out.println("CompressList -- " + list1);

@@ -11,11 +11,9 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.Vector;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -212,7 +210,7 @@ public class IndexerInvertedDoconly extends Indexer {
 			int quotient = docid / 300;
 			int remainder = docid % 300;
 			int docFile = (quotient + 1) * 300;
-			String fileName = _options._indexPrefix + "/" + docFile;
+			String fileName = _options._indexPrefix + "/" + docFile+".dat";
 			List<Document> docs = _persistentStore.loadDoc(fileName);
 			return docs.get(remainder);
 		} catch (Exception e) {
@@ -235,7 +233,7 @@ public class IndexerInvertedDoconly extends Indexer {
 			List<List<Integer>> list = new ArrayList<List<Integer>>();
 			for (String search : queryVector) {
 				String fileName = _options._indexPrefix + "/"
-						+ search.charAt(0);
+						+ search.charAt(0)+".idx";
 				System.out.println(fileName);
 				String cmd = "grep '\\<" + search + "\\>' " + fileName;
 				List<String> commands = new ArrayList<String>();
@@ -323,10 +321,10 @@ public class IndexerInvertedDoconly extends Indexer {
 		Options option = new Options("conf/engine.conf");
 		IndexerInvertedDoconly in = new IndexerInvertedDoconly(option);
 		Date d = new Date();
-		in.constructIndex();
-		//Query query = new Query("arthur answer");
-		//Document doc = in.nextDoc(query, 985);
-		//System.out.println(doc._docid);
+		//in.constructIndex();
+		Query query = new Query("arthur zero");
+		Document doc = in.nextDoc(query, 2);
+		System.out.println(doc._docid);
 		Date d1 = new Date();
 		System.out.println(d);
 		System.out.println(d1);
