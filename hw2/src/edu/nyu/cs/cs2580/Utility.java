@@ -6,12 +6,13 @@ import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import net.htmlparser.jericho.Source;
 
@@ -28,8 +29,9 @@ class Utility {
 		CharTermAttribute cattr = stream.addAttribute(CharTermAttribute.class);
 		while (stream.incrementToken()) {
 			String stemmedToken = cattr.toString().trim();
-			if(stemmedToken.matches("[a-zA-Z0-9]*")){
-				stemmedToken = Stemmer.getStemmedWord(stemmedToken.toLowerCase());
+			if (stemmedToken.matches("[a-zA-Z0-9]*")) {
+				stemmedToken = Stemmer.getStemmedWord(stemmedToken
+						.toLowerCase());
 				tempTokens.add(stemmedToken);
 			}
 		}
@@ -42,8 +44,7 @@ class Utility {
 		Set<String> set = new HashSet<String>();
 		set.add("a");
 		set.add("b");
-		Analyzer an = new EnglishAnalyzer(Version.LUCENE_30,
-				set);
+		Analyzer an = new EnglishAnalyzer(Version.LUCENE_30, set);
 		TokenStream stream = an
 				.tokenStream("FileName", new StringReader(input));
 		an.close();
@@ -68,9 +69,62 @@ class Utility {
 		}
 		return files;
 	}
-	private static String compress(String input){
-		Integer integer = Integer.parseInt(input);
-		String binary = Integer.toBinaryString(integer);
+
+	private static List<Byte> compressByte(Integer input) {
+		String st = Integer.toBinaryString(input);
+		int size = st.length();
+		int index = 0;
+		System.out.println("Size " + st.length());
+		int iteration = size / 8;
+		int padding = 8 - (size % 8);
+		String[] binary = new String[iteration+1];
+		int begin = size - 8;
+		int end = size;
+		System.out.println(iteration);
+		while (iteration > 0){
+			binary[index] = st.substring(begin, end);
+			end = begin;
+			begin = begin - 8;
+			iteration--;
+			index++;
+		}
+		String temp = "";
+		while(padding > 0){
+			temp += "0";
+			padding--;
+		}
+		temp += st.substring(0,end);
+		binary[index] = temp;
+		List<Byte> returnList = new ArrayList<Byte>();
+		for(int i = binary.length - 1 ; i >= 0 ; i--){
+			System.out.println(binary[i]);
+			int tempByte = Integer.parseInt(binary[i],2);
+			returnList.add((byte)(tempByte));
+		}
+		System.out.println(returnList);
+		return returnList;
+	}
+	private static int decompressFromListOfBytes(List<Byte> list){
+		String binary ="";
+		for(Byte b : list){
+			int i = b;
+			if(b.toString().contains("-")){
+			i = (int) b & 0xff;
+			}
+			String temp = Integer.toBinaryString(i);
+			int size = temp.length();
+			int padding = 8 - size;
+			char[] pads = new char[padding];
+			Arrays.fill(pads,'0');
+			String padString = new String(pads);
+			temp = padString + temp;
+			binary += temp;
+		}
+		System.out.println(binary);
+		return Integer.parseInt(binary, 2);
+	}
+	private static Byte compress(Integer input) {
+		String binary = Integer.toBinaryString(input);
 		String st = "";
 		int counter = 1;
 		boolean flag = true;
@@ -113,12 +167,12 @@ class Utility {
 		finalSt = temp + finalSt;
 		System.out.println(finalSt);
 		int i = Integer.parseInt(finalSt, 2);
-		String hexString = Integer.toHexString(i);
-		return hexString;
+		Byte bytes = new Byte((byte) i);
+		return bytes;
 	}
-	private static String decompress(String s) {
-		Integer i = Integer.parseInt(s, 16);
-		String i1 = Integer.toBinaryString(i);
+
+	private static Integer decompress(Byte by) {
+		String i1 = String.valueOf(by);
 		int counter = 1;
 		String ft = "";
 		for (int x = i1.length() - 1; x >= 0; x--) {
@@ -134,97 +188,98 @@ class Utility {
 			gt += ft.charAt(x);
 		}
 		Integer i5 = Integer.parseInt(gt, 2);
-		return i5.toString();
+		return i5;
 	}
-	public static List<String> createCompressedList(List<String> list) {
-		System.out.println(list);
-		Map<String, List<String>> map = new LinkedHashMap<String, List<String>>();
-		for (int i = 0; i < list.size() - 1; i = i + 2) {
-			if (map.containsKey(list.get(i))) {
-				List<String> tempList = map.get(list.get(i));
-				tempList.add(list.get(i + 1));
-			} else {
-				List<String> tempList = new ArrayList<String>();
-				tempList.add(list.get(i + 1));
-				map.put(list.get(i), tempList);
-			}
-		}
-		List<String> returnList = new ArrayList<String>();
-		String nextKey = "0";
-		for (Map.Entry<String, List<String>> entry : map.entrySet()) {
-			returnList.add(String.valueOf(Integer.parseInt(entry.getKey()) - Integer.parseInt(nextKey)));
+
+	public static List<List<Byte>> createCompressedList(Map<Integer, List<Integer>> map) {
+		System.out.println(map);
+		List<Integer> returnList = new ArrayList<Integer>();
+		Integer nextKey = 0;
+		for (Map.Entry<Integer, List<Integer>> entry : map.entrySet()) {
+			returnList.add(entry.getKey() - nextKey);
 			nextKey = entry.getKey();
-			returnList.add(String.valueOf(entry.getValue().size()));
-			List<String> tempList = entry.getValue();
+			returnList.add(entry.getValue().size());
+			List<Integer> tempList = entry.getValue();
 			returnList.add(tempList.get(0));
 			for (int i = 1; i < tempList.size(); i++) {
-				returnList.add(String.valueOf(Integer.parseInt(tempList.get(i)) - Integer.parseInt(tempList.get(i-1))));
+				returnList.add(tempList.get(i) - tempList.get(i - 1));
 			}
 		}
-		List<String> compressList = new ArrayList<String>();
-		for(String s : returnList){
-			String hex = compress(s);
-			compressList.add(hex);
+		System.out.println(returnList);
+		List<List<Byte>> compressList = new ArrayList<List<Byte>>();
+		for (Integer s : returnList) {
+			List<Byte> tempList = compressByte(s);
+			compressList.add(tempList);
 		}
 		return compressList;
 	}
-	
-	public static Map<String,List<String>> createDecompressedMap(List<String> list1){
+
+	public static Map<Integer, List<Integer>> createDecompressedMap(
+			List<List<Byte>> list1) {
 		int size = 0;
-		Map<String,List<String>> map = new LinkedHashMap<String,List<String>>();
-		String st = "";
+		Map<Integer, List<Integer>> map = new LinkedHashMap<Integer, List<Integer>>();
+		Integer st = 0;
 		Integer lastSt = 0;
-		List<String> list = new ArrayList<String>();
-		for(String s : list1){
-			String normal = decompress(s);
+		List<Integer> list = new ArrayList<Integer>();
+		for (List<Byte> b : list1) {
+			Integer normal = decompressFromListOfBytes(b);
 			list.add(normal);
 		}
-		while(size < list.size()){
+		while (size < list.size()) {
 			st = list.get(size);
-			st = String.valueOf(Integer.parseInt(st) + lastSt);
-			lastSt = Integer.parseInt(st);
+			st = st + lastSt;
+			lastSt = st;
 			size = size + 1;
-			int tempSize = Integer.parseInt(list.get(size));
+			int tempSize = list.get(size);
 			System.out.println("size:" + tempSize);
 			size++;
 			int temp = 0;
-			List<String> tempList = new ArrayList<String>();
-			while (temp < tempSize ){
+			List<Integer> tempList = new ArrayList<Integer>();
+			while (temp < tempSize) {
 				tempList.add(list.get(size));
 				size++;
 				temp++;
 			}
 			map.put(st, tempList);
 		}
-		for(Map.Entry<String, List<String>> entry : map.entrySet()){
-			List<String> returnList = new ArrayList<String>();
-			List<String> tempList = entry.getValue();
+		for (Map.Entry<Integer, List<Integer>> entry : map.entrySet()) {
+			List<Integer> returnList = new ArrayList<Integer>();
+			List<Integer> tempList = entry.getValue();
 			returnList.add(tempList.get(0));
-			for(int i = 1 ; i < tempList.size() ; i++){
-				returnList.add(String.valueOf(Integer.parseInt(returnList.get(returnList.size() - 1)) + Integer.parseInt(tempList.get(i))));
+			for (int i = 1; i < tempList.size(); i++) {
+				returnList.add((returnList.get(returnList.size() - 1))
+						+ tempList.get(i));
 			}
 			entry.setValue(returnList);
 		}
-	return map;
+		return map;
 	}
+
 	public static void main(String[] args) throws MalformedURLException,
 			IOException {
-		List<String> tempList = new ArrayList<String>();
-		tempList.add("1");
-		tempList.add("1");
-		tempList.add("1");
-		tempList.add("7");
-		tempList.add("2");
-		tempList.add("6");
-		tempList.add("2");
-		tempList.add("17");
-		tempList.add("2");
-		tempList.add("197");
-		tempList.add("3");
-		tempList.add("1");
-		System.out.println("List -- " + tempList);
-		List<String> list1 = createCompressedList(tempList);
+		List<Integer> tempList = new ArrayList<Integer>();
+		Map<Integer, List<Integer>> map = new HashMap<Integer, List<Integer>>();
+		tempList.add(1);
+		tempList.add(7);
+		map.put(1, tempList);
+
+		tempList = new ArrayList<Integer>();
+		tempList.add(6);
+		tempList.add(17);
+		tempList.add(197);
+		map.put(2, tempList);
+
+		tempList = new ArrayList<Integer>();
+		tempList.add(1);
+		map.put(3, tempList);
+
+		System.out.println("Map -- " + map);
+		List<List<Byte>> list1 = createCompressedList(map);
 		System.out.println("CompressList -- " + list1);
 		System.out.println("Decompress -- " + createDecompressedMap(list1));
-	}
+			/*System.out.println(Integer.toBinaryString(127896));
+			List<Byte> list = compressByte(127896);
+			System.out.println(decompressFromListOfBytes(list));
+			System.out.println();*/
+		}
 }
