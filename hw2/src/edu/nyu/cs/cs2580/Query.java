@@ -2,6 +2,7 @@ package edu.nyu.cs.cs2580;
 
 import java.util.Scanner;
 import java.util.Vector;
+import java.util.regex.Pattern;
 
 /**
  * Representation of a user query.
