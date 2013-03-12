@@ -35,6 +35,10 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  List<String> documents = Utility.getFilesInDirectory(_options._corpusPrefix);
 	  for (String filename: documents) {
 		  processDocument(filename);
+		  if (_numDocs % BULK_DOC_WRITE_SIZE == 0) {
+				_persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
+				_documents.clear();
+			}
 		  if (_numDocs % BULK_DOC_PROCESSING_SIZE == 0) {
 			  System.out.println("Processed files: " + _numDocs);
 			  updateIndexWithMap(_characterMap);
@@ -45,6 +49,10 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  if (!_characterMap.isEmpty()) { 
 		  updateIndexWithMap(_characterMap);
 		  _characterMap.clear();
+	  }
+	  if (!_documents.isEmpty()) {
+		  _persistentStore.saveDoc(_options._indexPrefix + "/" + String.valueOf(_numDocs) + ".dat", _documents);
+		  _documents.clear();
 	  }
 	  saveIndexMetadata();
 	  System.out.println("Indexed " + Integer.toString(_numDocs) + " docs with " +
@@ -66,8 +74,9 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  String document = Utility.extractText(corpusFile);
 	  List<String> stemmedTokens = Utility.tokenize(document);
 	  buildMapFromTokens(docId, stemmedTokens);
-	  //DocumentIndexed doc = new DocumentIndexed(docId);
-	  //_documents.add(doc);
+	  DocumentIndexed doc = new DocumentIndexed(docId);
+	  doc.setUrl(filename);
+	  _documents.add(doc);
 	  _docMap.put(filename, new Long(docId));
 	  _numDocs++;
   }
@@ -232,7 +241,6 @@ public class IndexerInvertedOccurrence extends Indexer {
     int docTermFrequency = 0;
     if (_docMap.containsKey(url)) {
     	int docId = _docMap.get(url).intValue();
-    	System.out.println("Doc ID: " + docId);
     	String prefix = getTermPrefix(term);
   	  	List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
   	  
@@ -244,7 +252,6 @@ public class IndexerInvertedOccurrence extends Indexer {
   				Map<Integer, List<Integer>> docMap = wordMap.get(term);
   				if (docMap.containsKey(docId)) {
   					docTermFrequency += docMap.get(docId).size();
-  					System.out.println("Size: " + docMap.get(docId).size());
   					break;
   				}
   			}
@@ -261,6 +268,6 @@ public class IndexerInvertedOccurrence extends Indexer {
 	IndexerInvertedOccurrence in = new IndexerInvertedOccurrence(option);
 	in.loadIndex();
 	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
-	System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
+	//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
   }
 }
