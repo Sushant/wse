@@ -21,28 +21,30 @@ public class QueryPhrase extends Query {
 	if (_query == null) {
 	   return;
 	}
-	Scanner s1 = new Scanner(_query);
-	while (s1.hasNext()) {
-	   _tokens.add(s1.next());
-	}
-	s1.close();
 	      
-	Scanner s2 = new Scanner(_query);
+	Scanner s1 = new Scanner(_query);
 	Pattern pattern = Pattern.compile(
 	  "\"[^\"]*\"" );
 	String token;
-	while ((token = s2.findInLine(pattern)) != null) {
+	while ((token = s1.findInLine(pattern)) != null) {
+	   _query = _query.replace(token,"");
 	   Vector<String> temp = new Vector<String>();
 	   int end = token.length() -1;
 	   token = token.substring(1, end);
-	   Scanner s3 = new Scanner(token);
-	   while (s3.hasNext()) {
-	     temp.add(s3.next());
+	   Scanner s2 = new Scanner(token);
+	   while (s2.hasNext()) {
+	     temp.add(s2.next());
 	   }
 	   _phraseTokens.add(temp);
-	      s3.close();
-	   }
-	   s2.close();
+	      s2.close();
+	}
+	s1.close();
+	
+	Scanner s3 = new Scanner(_query);
+	while (s3.hasNext()) {
+	   _tokens.add(s3.next());
+	}
+	s3.close();
   }
-  
+   
 }
