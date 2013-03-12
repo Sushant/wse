@@ -33,7 +33,7 @@ public class QueryPhrase extends Query {
 	   token = token.substring(1, end);
 	   Scanner s2 = new Scanner(token);
 	   while (s2.hasNext()) {
-	     temp.add(s2.next());
+	     temp.add(Stemmer.getStemmedWord(s2.next()) );
 	   }
 	   _phraseTokens.add(temp);
 	      s2.close();
@@ -42,9 +42,9 @@ public class QueryPhrase extends Query {
 	
 	Scanner s3 = new Scanner(_query);
 	while (s3.hasNext()) {
-	   _tokens.add(s3.next());
+	   _tokens.add( Stemmer.getStemmedWord(s3.next()) );
 	}
 	s3.close();
-  }
+  } 
    
 }
