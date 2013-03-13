@@ -3,7 +3,6 @@ package edu.nyu.cs.cs2580;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -198,7 +197,6 @@ public class IndexerInvertedOccurrence extends Indexer {
 	Set<Integer> tokenDocSet = new HashSet<Integer>();
 	Set<Integer> finalDocSet = new HashSet<Integer>();
 	if (_queryDocSet.containsKey(queryStr)) {
-		System.out.println("Cache hit");
 		finalDocSet = _queryDocSet.get(queryStr);
 	} else {
 			QueryPhrase queryPhrase = new QueryPhrase(queryStr);
@@ -208,8 +206,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 				if (finalDocSet.isEmpty()) {
 					finalDocSet = docSetFromPhraseTokens(phrase, docid);
 				} else {
-					finalDocSet
-							.retainAll(docSetFromPhraseTokens(phrase, docid));
+					finalDocSet.retainAll(docSetFromPhraseTokens(phrase, docid));
 				}
 			}
 			if (!finalDocSet.isEmpty() && !queryPhrase._phraseTokens.isEmpty()) {
@@ -227,6 +224,9 @@ public class IndexerInvertedOccurrence extends Indexer {
 
 			if (finalDocSet.isEmpty()) {
 				return null;
+			}
+			if (_queryDocSet.size() == 100) {
+				_queryDocSet.clear();
 			}
 			_queryDocSet.put(queryStr, finalDocSet);
 	}
@@ -296,7 +296,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 	return finalDocSet;
 }
 
-private Set<Integer> docSetFromTokens(Vector<String> tokens, int currentDocId) {
+  private Set<Integer> docSetFromTokens(Vector<String> tokens, int currentDocId) {
 	  Map<String, Map<Integer, List<Integer>>> tokenMap = new HashMap<String, Map<Integer, List<Integer>>>();
 		for (String t: tokens) {
 			String prefix = Utility.getTermPrefix(t);
@@ -432,13 +432,16 @@ private Set<Integer> docSetFromTokens(Vector<String> tokens, int currentDocId) {
 	in.loadIndex();
 	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
 	//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
-	Query q = new Query("\"wikipedia\"");
+	Query q = new Query("\"about\"");
 	
 	Document doc = null;
 	int docid = -1;
+	int counter = 0;
 	while ((doc = in.nextDoc(q, docid)) != null) {
+		counter++;
 		docid = doc._docid;
 		System.out.println(docid + " " + doc.getUrl());
 	}
+	System.out.println("Count:  " + counter);
   }
 }

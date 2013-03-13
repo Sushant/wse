@@ -3,10 +3,11 @@ package edu.nyu.cs.cs2580;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 
@@ -24,11 +25,14 @@ public class IndexerInvertedCompressed extends Indexer {
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<String, Map<String, Map<Integer, List<Integer>>>> _characterMap;
 	private Map<String, Long> _docMap;
+	private Map<String, Set<Integer>> _queryDocSet; // Caching for nextDoc
 	
   public IndexerInvertedCompressed(Options options) {
     super(options);
     _characterMap = new HashMap<String, Map<String, Map<Integer, List<Integer>>>>();
     _docMap = new HashMap<String, Long>();
+    _queryDocSet = new HashMap<String, Set<Integer>>();
+    
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
   }
 
@@ -86,22 +90,8 @@ public class IndexerInvertedCompressed extends Indexer {
 		String indexFile = _options._indexPrefix + "/" + filename + ".idx";
 		Map<String, Map<Integer, List<Integer>>> wordMap = characterMap.get(chars);
 		try {
+			Map<String, Map<Integer, List<Integer>>> loadedWordMap = loadWordMapFromFile(indexFile);
 			
-			Map<String,List<List<Integer>>> tempStoredMap = _persistentStore.loadBytes(indexFile);
-			Map<String, Map<Integer, List<Integer>>> loadedWordMap = new HashMap<String, Map<Integer, List<Integer>>>();
-			for(Map.Entry<String, List<List<Integer>>> entry : tempStoredMap.entrySet()){
-				try{
-				Map<Integer,List<Integer>> tempIntMap = Utility.createDecompressedMap(entry.getValue());
-				loadedWordMap.put(entry.getKey(), tempIntMap);
-				}catch(Exception e){
-					System.out.println("Index file " + indexFile);
-					String s = entry.getKey();
-					System.out.println(s);
-					e.printStackTrace();
-					System.exit(1);
-				}
-				
-			}
 			for (String word: wordMap.keySet()) {
 				Map<Integer, List<Integer>> docMap = wordMap.get(word);
 				if (loadedWordMap.containsKey(word)) {
@@ -113,25 +103,40 @@ public class IndexerInvertedCompressed extends Indexer {
 					loadedWordMap.put(word, docMap);
 				}
 			}
-			Map<String,List<List<Integer>>> storedMap = new HashMap<String,List<List<Integer>>>();
-			for(Map.Entry<String, Map<Integer,List<Integer>>> entry : loadedWordMap.entrySet()){
-				List<List<Integer>> tempByteList = Utility.createCompressedList(entry.getValue());
-				storedMap.put(entry.getKey(), tempByteList);
-			}
-			_persistentStore.saveBytes(indexFile, storedMap);
+			storeMapFromWordMap(loadedWordMap, indexFile);
 		} catch (IOException e) {
 			try {
-				Map<String,List<List<Integer>>> storedMap = new HashMap<String,List<List<Integer>>>();
-				for(Map.Entry<String, Map<Integer,List<Integer>>> entry : wordMap.entrySet()){
-					List<List<Integer>> tempByteList = Utility.createCompressedList(entry.getValue());
-					storedMap.put(entry.getKey(), tempByteList);
-				}
-				_persistentStore.saveBytes(indexFile,storedMap);
+				storeMapFromWordMap(wordMap, indexFile);
 			} catch (IOException e1) {
 				System.out.println("Failed to write " + indexFile);
 			}
 		}
 	}
+  }
+  
+  private void storeMapFromWordMap(Map<String, Map<Integer, List<Integer>>> wordMap, String indexFile) throws IOException {
+	  Map<String,List<List<Integer>>> storedMap = new HashMap<String,List<List<Integer>>>();
+		for(Map.Entry<String, Map<Integer,List<Integer>>> entry : wordMap.entrySet()){
+			List<List<Integer>> tempByteList = Utility.createCompressedList(entry.getValue());
+			storedMap.put(entry.getKey(), tempByteList);
+		}
+		_persistentStore.saveBytes(indexFile, storedMap);
+  }
+  
+  private Map<String, Map<Integer, List<Integer>>> loadWordMapFromFile(String indexFile) throws IOException {
+	  Map<String, List<List<Integer>>> tempStoredMap = _persistentStore.loadBytes(indexFile);
+	  System.out.println("Stored Map: " + tempStoredMap);
+		Map<String, Map<Integer, List<Integer>>> loadedWordMap = new HashMap<String, Map<Integer, List<Integer>>>();
+		for(Map.Entry<String, List<List<Integer>>> entry : tempStoredMap.entrySet()){
+			try {
+				Map<Integer,List<Integer>> tempIntMap = Utility.createDecompressedMap(entry.getValue());
+				System.out.println("Int Map: " + tempIntMap);
+				loadedWordMap.put(entry.getKey(), tempIntMap);
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return loadedWordMap;
   }
   
 
@@ -196,31 +201,199 @@ public class IndexerInvertedCompressed extends Indexer {
 
 @Override
   public Document getDoc(int docid) {
-    SearchEngine.Check(false, "Do NOT change, not used for this Indexer!");
-    return null;
+	try {
+		int quotient = docid / BULK_DOC_WRITE_SIZE;
+		int remainder = docid % BULK_DOC_WRITE_SIZE;
+		int docFile = (quotient + 1) * BULK_DOC_WRITE_SIZE;
+		String fileName = _options._indexPrefix + "/" + docFile + ".dat";
+		List<DocumentIndexed> docs = _persistentStore.loadDoc(fileName);
+		return docs.get(remainder);
+	} catch (Exception e) {
+		return null;
+	}
   }
 
   /**
    * In HW2, you should be using {@link DocumentIndexed}.
    */
-  @Override
-  public Document nextDoc(Query query, int docid) {
-	  query.processQuery();
-	List<String> queryVector = query._tokens;
-    return null;
-  }
+	@Override
+	public Document nextDoc(Query query, int docid) {
+		docid++;
+		String queryStr = query._query;
+		Set<Integer> phraseDocSet = new HashSet<Integer>();
+		Set<Integer> tokenDocSet = new HashSet<Integer>();
+		Set<Integer> finalDocSet = new HashSet<Integer>();
+		if (_queryDocSet.containsKey(queryStr)) {
+			finalDocSet = _queryDocSet.get(queryStr);
+		} else {
+			QueryPhrase queryPhrase = new QueryPhrase(queryStr);
+			queryPhrase.processQuery();
+
+			for (Vector<String> phrase : queryPhrase._phraseTokens) {
+				if (finalDocSet.isEmpty()) {
+					finalDocSet = docSetFromPhraseTokens(phrase, docid);
+				} else {
+					finalDocSet
+							.retainAll(docSetFromPhraseTokens(phrase, docid));
+				}
+			}
+			if (!finalDocSet.isEmpty() && !queryPhrase._phraseTokens.isEmpty()) {
+				phraseDocSet.addAll(finalDocSet);
+				if (!queryPhrase._tokens.isEmpty()) {
+					tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
+					finalDocSet.retainAll(tokenDocSet);
+				}
+			} else {
+				if (queryPhrase._phraseTokens.isEmpty()) {
+					tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
+					finalDocSet.addAll(tokenDocSet);
+				}
+			}
+
+			if (finalDocSet.isEmpty()) {
+				return null;
+			}
+			if (_queryDocSet.size() == 100) {
+				_queryDocSet.clear();
+			}
+			_queryDocSet.put(queryStr, finalDocSet);
+		}
+		int nextDocId = getMinNextDocId(finalDocSet, docid);
+		if (nextDocId == -1) {
+			return null;
+		}
+		return getDoc(nextDocId);
+	}
+
+
+	private Set<Integer> docSetFromPhraseTokens(Vector<String> phrase, int currentDocId) {
+	  Map<String, Map<Integer, List<Integer>>> tokenMap = new HashMap<String, Map<Integer, List<Integer>>>();
+		for (String t: phrase) {
+			String prefix = Utility.getTermPrefix(t);
+			List<String> matchedIndexDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, ".idx");
+			for (String matchedIndexDoc : matchedIndexDocs) {
+				try {
+					String filepath = _options._indexPrefix + "/" + matchedIndexDoc;
+					Map<String, Map<Integer, List<Integer>>> wordMap = loadWordMapFromFile(filepath);
+					System.out.println("Word Map: " + wordMap);
+					if (wordMap.containsKey(t)) {
+						if (tokenMap.containsKey(t)) {
+							Map<Integer, List<Integer>> docMap = tokenMap.get(t);
+							docMap.putAll(wordMap.get(t));
+						} else {
+							tokenMap.put(t, wordMap.get(t));
+						}
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		if (tokenMap.keySet().size() != phrase.size()) {
+			// We did not find a doc where all the tokens are present
+			return new HashSet<Integer>();
+		}
+		return getDocSetFromPhraseTokenMap(tokenMap, phrase);
+	}
+
+	private Set<Integer> getDocSetFromPhraseTokenMap(Map<String, Map<Integer, List<Integer>>> tokenMap, Vector<String> phrase) {
+		Set<Integer> docSet = getDocSetFromTokenMap(tokenMap);
+		Set<Integer> finalOccSet = new HashSet<Integer>();
+		Set<Integer> finalDocSet = new HashSet<Integer>();
+		for (Integer docId : docSet) {
+			int subtractionFactor = 0;
+			Map<String, List<Integer>> occurrenceMap = new HashMap<String, List<Integer>>();
+			for (String term : phrase) {
+				List<Integer> occurrenceList = new ArrayList<Integer>();
+				for (Integer occurrence : tokenMap.get(term).get(docId)) {
+					occurrenceList.add(occurrence - subtractionFactor);
+				}
+				occurrenceMap.put(term, occurrenceList);
+				subtractionFactor++;
+			}
+			for (List<Integer> ol : occurrenceMap.values()) {
+				if (finalOccSet.isEmpty()) {
+					finalOccSet.addAll(ol);
+				} else {
+					finalOccSet.retainAll(ol);
+				}
+			}
+			if (!finalOccSet.isEmpty()) {
+				finalDocSet.add(docId);
+			}
+		}
+		return finalDocSet;
+	}
+
+	private Set<Integer> docSetFromTokens(Vector<String> tokens, int currentDocId) {
+	  Map<String, Map<Integer, List<Integer>>> tokenMap = new HashMap<String, Map<Integer, List<Integer>>>();
+		for (String t: tokens) {
+			String prefix = Utility.getTermPrefix(t);
+			List<String> matchedIndexDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, ".idx");
+			for (String matchedIndexDoc : matchedIndexDocs) {
+				try {
+					String filepath = _options._indexPrefix + "/" + matchedIndexDoc;
+					Map<String, Map<Integer, List<Integer>>> wordMap = loadWordMapFromFile(filepath);
+					if (wordMap.containsKey(t)) {
+						if (tokenMap.containsKey(t)) {
+							Map<Integer, List<Integer>> docMap = tokenMap.get(t);
+							docMap.putAll(wordMap.get(t));
+						} else {
+							tokenMap.put(t, wordMap.get(t));
+						}
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		if (tokenMap.keySet().size() != tokens.size()) {
+			// We did not find a doc where all the tokens are present
+			return new HashSet<Integer>();
+		}
+		return getDocSetFromTokenMap(tokenMap);
+	}
+
+
+	private Set<Integer> getDocSetFromTokenMap(Map<String, Map<Integer, List<Integer>>> tokenMap) {
+	  Set<Integer> finalDocSet = new HashSet<Integer>();
+	  for (String term: tokenMap.keySet()) {
+		  if (finalDocSet.isEmpty()) {
+			  finalDocSet = tokenMap.get(term).keySet();
+		  } else {
+			  finalDocSet.retainAll(tokenMap.get(term).keySet());
+		  }
+	  }
+	  return finalDocSet;
+	}
+
+	private int getMinNextDocId(Set<Integer> docSet, int currentDocId) {
+	  Integer matchedDocId = Integer.MAX_VALUE;
+	  for (Integer docId: docSet) {
+		  if (docId >= currentDocId && matchedDocId > docId) {
+			  matchedDocId = docId;
+		  }
+	  }
+	  if (matchedDocId == Integer.MAX_VALUE) {
+		  return -1;
+	  } else {
+		  return matchedDocId.intValue();
+	  }
+	}
 
   @Override
   //Number of documents in which {@code term} appeared, over the full corpus.
   public int corpusDocFrequencyByTerm(String term) {
 	  int corpusFrequency = 0;
-	  String prefix = getTermPrefix(term);
+	  String prefix = Utility.getTermPrefix(term);
 	  List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
 	  
 	  for (String docName: matchingDocs) {
 		  String docPath = _options._indexPrefix + "/" + docName;
 		  try {
-			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
+			Map<String, Map<Integer, List<Integer>>> wordMap = loadWordMapFromFile(docPath);
 			if (wordMap.containsKey(term)) {
 				corpusFrequency += wordMap.get(term).size();
 			}
@@ -235,13 +408,13 @@ public class IndexerInvertedCompressed extends Indexer {
   //Number of times {@code term} appeared in corpus.
   public int corpusTermFrequency(String term) {
 	  int corpusTermFrequency = 0;
-	  String prefix = getTermPrefix(term);
+	  String prefix = Utility.getTermPrefix(term);
 	  List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
 	  
 	  for (String docName: matchingDocs) {
 		  String docPath = _options._indexPrefix + "/" + docName;
 		  try {
-			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
+			Map<String, Map<Integer, List<Integer>>> wordMap = loadWordMapFromFile(docPath);
 			if (wordMap.containsKey(term)) {
 				Map<Integer, List<Integer>> docMap = wordMap.get(term);
 				for (Integer docId: docMap.keySet()) {
@@ -252,54 +425,55 @@ public class IndexerInvertedCompressed extends Indexer {
 			continue;
 		}
 	  }
-	  return corpusTermFrequency;
+	  return corpusTermFrequency; 
   }
   
-  private String getTermPrefix(String term) {
-	  if (term.length() >= 2) {
-		  return term.substring(0, 2);
-	  } else {
-	  	  return term.substring(0, 1);
-	  }
-  }
 
   @Override
   //Number of times {@code term} appeared in the document {@code url}.
   public int documentTermFrequency(String term, String url) {
-    int docTermFrequency = 0;
-    if (_docMap.containsKey(url)) {
-    	int docId = _docMap.get(url).intValue();
-    	String prefix = getTermPrefix(term);
-  	  	List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
-  	  
-  	  	for (String docName: matchingDocs) {
-  		  String docPath = _options._indexPrefix + "/" + docName;
-  		  try {
-  			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
-  			if (wordMap.containsKey(term)) {
-  				Map<Integer, List<Integer>> docMap = wordMap.get(term);
-  				if (docMap.containsKey(docId)) {
-  					docTermFrequency += docMap.get(docId).size();
-  					break;
-  				}
-  			}
-  		  } catch (IOException e) {
-  			continue;
-  		  }
-  	  	}
-    }
-    return docTermFrequency;
+	  int docTermFrequency = 0;
+	    if (_docMap.containsKey(url)) {
+	    	int docId = _docMap.get(url).intValue();
+	    	String prefix = Utility.getTermPrefix(term);
+	  	  	List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
+	  	  
+	  	  	for (String docName: matchingDocs) {
+	  		  String docPath = _options._indexPrefix + "/" + docName;
+	  		  try {
+	  			Map<String, Map<Integer, List<Integer>>> wordMap = loadWordMapFromFile(docPath);
+	  			if (wordMap.containsKey(term)) {
+	  				Map<Integer, List<Integer>> docMap = wordMap.get(term);
+	  				if (docMap.containsKey(docId)) {
+	  					docTermFrequency += docMap.get(docId).size();
+	  					break;
+	  				}
+	  			}
+	  		  } catch (IOException e) {
+	  			continue;
+	  		  }
+	  	  	}
+	    }
+	    return docTermFrequency;
   }
   
   public static void main(String[] args) throws IOException, ClassNotFoundException {
-	Options option = new Options("conf/engine.conf");
-	IndexerInvertedCompressed in = new IndexerInvertedCompressed(option);
-	Date d = new Date();
-	in.constructIndex();
-	Date d1 = new Date();
-	System.out.println(d);
-	System.out.println(d1);
-	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
-	//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
+	  Options option = new Options("conf/engine.conf");
+		IndexerInvertedCompressed in = new IndexerInvertedCompressed(option);
+		in.loadIndex();
+		//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
+		//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
+		Query q = new Query("\"web\"");
+		
+		Document doc = null;
+		int docid = -1;
+		int counter = 0;
+		while ((doc = in.nextDoc(q, docid)) != null) {
+			counter++;
+			docid = doc._docid;
+			System.out.println(docid + " " + doc.getUrl());
+		}
+		System.out.println("Count:  " + counter);
+	  }
   }
-}
+
