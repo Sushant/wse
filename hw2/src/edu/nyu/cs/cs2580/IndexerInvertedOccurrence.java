@@ -3,9 +3,12 @@ package edu.nyu.cs.cs2580;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
@@ -169,8 +172,17 @@ public class IndexerInvertedOccurrence extends Indexer {
 
 @Override
   public Document getDoc(int docid) {
-    SearchEngine.Check(false, "Do NOT change, not used for this Indexer!");
-    return null;
+	try {
+		int quotient = docid / BULK_DOC_WRITE_SIZE;
+		int remainder = docid % BULK_DOC_WRITE_SIZE;
+		int docFile = (quotient + 1) * BULK_DOC_WRITE_SIZE;
+		String fileName = _options._indexPrefix + "/" + docFile + ".dat";
+		List<DocumentIndexed> docs = _persistentStore.loadDoc(fileName);
+		return docs.get(remainder);
+	} catch (Exception e) {
+		e.printStackTrace();
+	}
+	return null;
   }
 
   /**
@@ -178,16 +190,166 @@ public class IndexerInvertedOccurrence extends Indexer {
    */
   @Override
   public Document nextDoc(Query query, int docid) {
-	  query.processQuery();
-	List<String> queryVector = query._tokens;
-    return null;
+	docid++;
+	String queryStr = query._query;
+	QueryPhrase queryPhrase = new QueryPhrase(queryStr);
+	queryPhrase.processQuery();
+	Set<Integer> phraseDocSet = new HashSet<Integer>();
+	Set<Integer> tokenDocSet = new HashSet<Integer>();
+	Set<Integer> finalDocSet = new HashSet<Integer>();
+	for (Vector<String> phrase: queryPhrase._phraseTokens) {
+		if (finalDocSet.isEmpty()) {
+			finalDocSet = docSetFromPhraseTokens(phrase, docid);
+		} else {
+			finalDocSet.retainAll(docSetFromPhraseTokens(phrase, docid));
+		}
+	}
+	if (!finalDocSet.isEmpty() && !queryPhrase._phraseTokens.isEmpty()) {
+		phraseDocSet.addAll(finalDocSet);
+		if (!queryPhrase._tokens.isEmpty()) {
+			tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
+			finalDocSet.retainAll(tokenDocSet);
+		}
+	} else {
+		System.out.println("ELSE");
+		if (queryPhrase._phraseTokens.isEmpty()) {
+			tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
+			finalDocSet.addAll(tokenDocSet);
+		} else {
+			System.out.println("ELSE1");
+		}
+	}
+	
+	if (finalDocSet.isEmpty()) {
+		return null;
+	}
+	int nextDocId = getMinNextDocId(finalDocSet, docid);
+	if (nextDocId == -1) {
+		return null;
+	}
+	return getDoc(nextDocId);
+  }
+  
+  
+  private Set<Integer> docSetFromPhraseTokens(Vector<String> phrase, int currentDocId) {
+	  Map<String, Map<Integer, List<Integer>>> tokenMap = new HashMap<String, Map<Integer, List<Integer>>>();
+		for (String t: phrase) {
+			String prefix = Utility.getTermPrefix(t);
+			List<String> matchedIndexDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, ".idx");
+			for (String matchedIndexDoc : matchedIndexDocs) {
+				try {
+					Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(_options._indexPrefix + "/" + matchedIndexDoc);
+					if (wordMap.containsKey(t)) {
+						if (tokenMap.containsKey(t)) {
+							Map<Integer, List<Integer>> docMap = tokenMap.get(t);
+							docMap.putAll(wordMap.get(t));
+						} else {
+							tokenMap.put(t, wordMap.get(t));
+						}
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		if (tokenMap.keySet().size() != phrase.size()) {
+			// We did not find a doc where all the tokens are present
+			return new HashSet<Integer>();
+		}
+		return getDocSetFromPhraseTokenMap(tokenMap, phrase);
+  }
+  
+  private Set<Integer> getDocSetFromPhraseTokenMap(Map<String, Map<Integer, List<Integer>>> tokenMap, Vector<String> phrase) {
+	Set<Integer> docSet = getDocSetFromTokenMap(tokenMap);
+	Set<Integer> finalOccSet = new HashSet<Integer>();
+	Set<Integer> finalDocSet = new HashSet<Integer>();
+	for (Integer docId: docSet) {
+		int subtractionFactor = 0;
+		Map<String, List<Integer>> occurrenceMap = new HashMap<String, List<Integer>>();
+		for (String term : phrase) {
+			List<Integer> occurrenceList = new ArrayList<Integer>();
+			for (Integer occurrence: tokenMap.get(term).get(docId)) {
+				occurrenceList.add(occurrence - subtractionFactor); 
+			}
+			occurrenceMap.put(term, occurrenceList);
+			subtractionFactor++;
+		}
+		for (List<Integer> ol: occurrenceMap.values()) {
+			if (finalOccSet.isEmpty()) {
+				finalOccSet.addAll(ol);
+			} else {
+				finalOccSet.retainAll(ol);
+			}
+		}
+		if (!finalOccSet.isEmpty()) {
+			finalDocSet.add(docId);
+		}
+	}
+	return finalDocSet;
+}
+
+private Set<Integer> docSetFromTokens(Vector<String> tokens, int currentDocId) {
+	  Map<String, Map<Integer, List<Integer>>> tokenMap = new HashMap<String, Map<Integer, List<Integer>>>();
+		for (String t: tokens) {
+			String prefix = Utility.getTermPrefix(t);
+			List<String> matchedIndexDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, ".idx");
+			for (String matchedIndexDoc : matchedIndexDocs) {
+				try {
+					Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(_options._indexPrefix + "/" + matchedIndexDoc);
+					if (wordMap.containsKey(t)) {
+						if (tokenMap.containsKey(t)) {
+							Map<Integer, List<Integer>> docMap = tokenMap.get(t);
+							docMap.putAll(wordMap.get(t));
+						} else {
+							tokenMap.put(t, wordMap.get(t));
+						}
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		if (tokenMap.keySet().size() != tokens.size()) {
+			// We did not find a doc where all the tokens are present
+			return new HashSet<Integer>();
+		}
+		return getDocSetFromTokenMap(tokenMap);
+  }
+  
+  
+  private Set<Integer> getDocSetFromTokenMap(Map<String, Map<Integer, List<Integer>>> tokenMap) {
+	  Set<Integer> finalDocSet = new HashSet<Integer>();
+	  for (String term: tokenMap.keySet()) {
+		  if (finalDocSet.isEmpty()) {
+			  finalDocSet = tokenMap.get(term).keySet();
+		  } else {
+			  finalDocSet.retainAll(tokenMap.get(term).keySet());
+		  }
+	  }
+	  return finalDocSet;
+  }
+  
+  private int getMinNextDocId(Set<Integer> docSet, int currentDocId) {
+	  Integer matchedDocId = Integer.MAX_VALUE;
+	  for (Integer docId: docSet) {
+		  if (docId >= currentDocId && matchedDocId > docId) {
+			  matchedDocId = docId;
+		  }
+	  }
+	  if (matchedDocId == Integer.MAX_VALUE) {
+		  return -1;
+	  } else {
+		  return matchedDocId.intValue();
+	  }
   }
 
   @Override
   //Number of documents in which {@code term} appeared, over the full corpus.
   public int corpusDocFrequencyByTerm(String term) {
 	  int corpusFrequency = 0;
-	  String prefix = getTermPrefix(term);
+	  String prefix = Utility.getTermPrefix(term);
 	  List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
 	  
 	  for (String docName: matchingDocs) {
@@ -208,7 +370,7 @@ public class IndexerInvertedOccurrence extends Indexer {
   //Number of times {@code term} appeared in corpus.
   public int corpusTermFrequency(String term) {
 	  int corpusTermFrequency = 0;
-	  String prefix = getTermPrefix(term);
+	  String prefix = Utility.getTermPrefix(term);
 	  List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
 	  
 	  for (String docName: matchingDocs) {
@@ -228,13 +390,6 @@ public class IndexerInvertedOccurrence extends Indexer {
 	  return corpusTermFrequency;
   }
   
-  private String getTermPrefix(String term) {
-	  if (term.length() >= 2) {
-		  return term.substring(0, 2);
-	  } else {
-	  	  return term.substring(0, 1);
-	  }
-  }
 
   @Override
   //Number of times {@code term} appeared in the document {@code url}.
@@ -242,7 +397,7 @@ public class IndexerInvertedOccurrence extends Indexer {
     int docTermFrequency = 0;
     if (_docMap.containsKey(url)) {
     	int docId = _docMap.get(url).intValue();
-    	String prefix = getTermPrefix(term);
+    	String prefix = Utility.getTermPrefix(term);
   	  	List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
   	  
   	  	for (String docName: matchingDocs) {
@@ -270,5 +425,13 @@ public class IndexerInvertedOccurrence extends Indexer {
 	in.loadIndex();
 	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
 	//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
+	Query q = new Query("\"Jerry Zucker films\"");
+	
+	Document doc = null;
+	int docid = -1;
+	while ((doc = in.nextDoc(q, docid)) != null) {
+		docid = doc._docid;
+		System.out.println(docid + " " + doc.getUrl());
+	}
   }
 }

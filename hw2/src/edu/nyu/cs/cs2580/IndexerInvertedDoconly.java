@@ -42,7 +42,6 @@ public class IndexerInvertedDoconly extends Indexer {
 		_corpusTermFrequencyCache = new HashMap<String, Integer>();
 		_characterMap = new HashMap<Character, Map<String, List<Integer>>>();
 		_docMap = new HashMap<String, Long>();
-		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
 	@Override
@@ -82,16 +81,12 @@ public class IndexerInvertedDoconly extends Indexer {
 		mergeAll();
 		_documents.clear();
 		saveIndexMetadata();
-		System.out.println("Indexed " + Integer.toString(_numDocs)
-				+ " docs with " + Long.toString(_totalTermFrequency)
-				+ " terms.");
 	}
 
 	private void writeFrequency(Map<String, Integer> frequency)
 			throws IOException {
 		String path = _options._indexPrefix + "/" + _numDocs + ".freq";
 		File file = new File(path);
-		// System.out.println(frequency);
 		OutputStream out = new FileOutputStream(file, true);
 		for (Map.Entry<String, Integer> entry1 : frequency.entrySet()) {
 			out.write(entry1.getKey().getBytes());
@@ -124,7 +119,6 @@ public class IndexerInvertedDoconly extends Indexer {
 
 	private void buildMapFromTokens(int docId, String docName,
 			List<String> stemmedTokens) {
-		System.out.println("DocId : " + docId);
 		DocumentIndexed doc = new DocumentIndexed(docId);
 		Map<String, Integer> termFrequency = new HashMap<String, Integer>();
 		for (String stemmedToken : stemmedTokens) {
@@ -174,10 +168,8 @@ public class IndexerInvertedDoconly extends Indexer {
 
 	private void mergeAll() throws IOException {
 		List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
-		System.out.println("Files: " + files);
 		for (String file : files) {
 			if (file.endsWith(".idx")) {
-				System.out.println("Merging... " + file);
 				Map<Character, Map<String, List<Integer>>> characterMap = readAll(file);
 				String fileName = _options._indexPrefix + "/" + file;
 				File charFile = new File(fileName);
@@ -270,18 +262,20 @@ public class IndexerInvertedDoconly extends Indexer {
 		try {
 			if (_docIdMap.containsKey(docid)) {
 				return _docIdMap.get(docid);
-			}else{
-			int quotient = docid / 300;
-			int remainder = docid % 300;
-			int docFile = (quotient + 1) * 300;
-			String fileName = _options._indexPrefix + "/" + docFile + ".dat";
-			List<DocumentIndexed> docs = _persistentStore.loadDoc(fileName);
-			DocumentIndexed doc = docs.get(remainder);
-			if (_docIdMap.size() > 10) {
-				_docIdMap.clear();
-			}
-			_docIdMap.put(docid, doc);
-			return doc;
+
+			} else {
+				int quotient = docid / 300;
+				int remainder = docid % 300;
+				int docFile = (quotient + 1) * 300;
+				String fileName = _options._indexPrefix + "/" + docFile
+						+ ".dat";
+				List<DocumentIndexed> docs = _persistentStore.loadDoc(fileName);
+				DocumentIndexed doc = docs.get(remainder);
+				if (_docIdMap.size() > 10) {
+					_docIdMap.clear();
+				}
+				_docIdMap.put(docid, doc);
+				return doc;
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -297,7 +291,7 @@ public class IndexerInvertedDoconly extends Indexer {
 	@Override
 	public Document nextDoc(Query query, int docid) {
 		try {
-			query.processQuery();
+			// query.processQuery();
 			List<String> queryVector = query._tokens;
 			List<List<Integer>> list = new ArrayList<List<Integer>>();
 			for (String search : queryVector) {
@@ -311,7 +305,6 @@ public class IndexerInvertedDoconly extends Indexer {
 					_wordToDocListMap.put(search, tempList);
 				}
 			}
-			// System.out.println("List Size --> " + list.size());
 			if (list.size() == 1) {
 				int index = Collections.binarySearch(list.get(0), docid);
 				if (index + 1 <= list.get(0).size() - 1) {
@@ -350,10 +343,10 @@ public class IndexerInvertedDoconly extends Indexer {
 		}
 		return null;
 	}
-	
+
+
 	private List<Integer> grepFile(String search, String fileName)
 			throws IOException {
-		// System.out.println(fileName);
 		String cmd = "grep '\\<" + search + "\\>' " + fileName;
 		// System.out.println(cmd);
 		List<String> commands = new ArrayList<String>();
@@ -369,7 +362,6 @@ public class IndexerInvertedDoconly extends Indexer {
 		String line = br.readLine();
 		// System.out.println(line);
 		s = line.split(" ");
-		// System.out.println("S size --> " + s.length);
 		List<Integer> tempList = new ArrayList<Integer>();
 		for (int i = 1; i < s.length; i++) {
 			tempList.add(Integer.parseInt(s[i]));
@@ -386,7 +378,6 @@ public class IndexerInvertedDoconly extends Indexer {
 	public int corpusTermFrequency(String term) {
 		try {
 			if (_corpusTermFrequencyCache.containsKey(term)) {
-				System.out.println("innn");
 				return _corpusTermFrequencyCache.get(term);
 			}
 			int total = 0;

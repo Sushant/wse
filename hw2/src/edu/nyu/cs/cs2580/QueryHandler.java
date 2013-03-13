@@ -134,10 +134,11 @@ class QueryHandler implements HttpHandler {
     if (uriPath == null || uriQuery == null) {
       respondWithMsg(exchange, "Something wrong with the URI!");
     }
+  
     if (!uriPath.equals("/search")) {
       respondWithMsg(exchange, "Only /search is handled!");
     }
-    System.out.println("Query: " + uriQuery);
+    //System.out.println("Query: " + uriQuery);
 
     // Process the CGI arguments.
     CgiArguments cgiArgs = new CgiArguments(uriQuery);

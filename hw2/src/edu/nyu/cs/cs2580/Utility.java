@@ -266,4 +266,62 @@ class Utility {
 		}
 		return map;
 	}
+	
+	public static String getTermPrefix(String term) {
+		  if (term.length() >= 2) {
+			  return term.substring(0, 2);
+		  } else {
+		  	  return term.substring(0, 1);
+		  }
+	  }
+	
+	// Given a term and doc Id, we need to find what index file we need to look into
+	public static String nextMachedDoc(String directory, String term, int docId, int bulk_doc_write_size) {
+		String prefix = getTermPrefix(term);
+		
+		List<String> matchedDocs = getFileInDirectory(directory, prefix, "idx");
+		int quotient = docId / bulk_doc_write_size;
+		int docFile = quotient + 1;
+		String desiredFilename = prefix + String.valueOf(docFile) + ".idx";
+		if (matchedDocs.contains(desiredFilename)) {
+			return desiredFilename;
+		}
+		return "";
+	}
+
+	public static void main(String[] args) throws MalformedURLException,
+			IOException {
+		/*List<Integer> tempList = new ArrayList<Integer>();
+		Map<Integer, List<Integer>> map = new HashMap<Integer, List<Integer>>();
+		tempList.add(1);
+		tempList.add(7);
+		map.put(1, tempList);
+
+		tempList = new ArrayList<Integer>();
+		tempList.add(6);
+		tempList.add(17);
+		tempList.add(197);
+		map.put(2, tempList);
+
+		tempList = new ArrayList<Integer>();
+		tempList.add(1);
+		map.put(3, tempList);
+		System.out.println("Map -- " + map);
+		List<List<Byte>> list1 = createCompressedList(map);
+		System.out.println("CompressList -- " + list1);
+		System.out.println("Decompress -- " + createDecompressedMap(list1));
+		System.out.println(getFileInDirectory("data/index", "i", "dat"));*/
+		//nextMachedDoc("data/index", "york", 563, 300);
+		List<Integer> l1 = new ArrayList<Integer>();
+		l1.add(1);
+		l1.add(123);
+		l1.add(134);
+		
+		List<Integer> l2 = new ArrayList<Integer>();
+		/*l2.add(2);
+		l2.add(123);
+		l2.add(4);*/
+		l1.retainAll(l2);
+		System.out.println(l1);
+	}
 }
