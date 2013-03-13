@@ -22,7 +22,7 @@ public class Query {
 
   public Query(String query) {
     try {
-    	 query.toLowerCase();
+    	 query = query.toLowerCase();
 		_query = URLDecoder.decode(query, "UTF-8");
 	} catch (UnsupportedEncodingException e) {
 		// TODO Auto-generated catch block
