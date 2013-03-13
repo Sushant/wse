@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -261,6 +262,7 @@ public class IndexerInvertedDoconly extends Indexer {
 		try {
 			if (_docIdMap.containsKey(docid)) {
 				return _docIdMap.get(docid);
+
 			} else {
 				int quotient = docid / 300;
 				int remainder = docid % 300;
@@ -304,7 +306,7 @@ public class IndexerInvertedDoconly extends Indexer {
 				}
 			}
 			if (list.size() == 1) {
-				int index = list.get(0).indexOf((docid));
+				int index = Collections.binarySearch(list.get(0), docid);
 				if (index + 1 <= list.get(0).size() - 1) {
 					return getDoc(list.get(0).get(index + 1));
 				} else {
@@ -325,7 +327,8 @@ public class IndexerInvertedDoconly extends Indexer {
 			for (int i = index1 + 1; i < tempInteger.size(); i++) {
 				boolean flag = false;
 				for (List<Integer> tempList1 : list) {
-					flag = tempList1.contains(tempInteger.get(i));
+					int tempIndex = Collections.binarySearch(tempList1, tempInteger.get(i));
+					flag = tempIndex < 0 ? false:true;
 					if (!flag) {
 						break;
 					}
@@ -341,9 +344,11 @@ public class IndexerInvertedDoconly extends Indexer {
 		return null;
 	}
 
+
 	private List<Integer> grepFile(String search, String fileName)
 			throws IOException {
 		String cmd = "grep '\\<" + search + "\\>' " + fileName;
+		// System.out.println(cmd);
 		List<String> commands = new ArrayList<String>();
 		commands.add("/bin/bash");
 		commands.add("-c");
@@ -355,6 +360,7 @@ public class IndexerInvertedDoconly extends Indexer {
 		BufferedReader br = new BufferedReader(isr);
 		String s[];
 		String line = br.readLine();
+		// System.out.println(line);
 		s = line.split(" ");
 		List<Integer> tempList = new ArrayList<Integer>();
 		for (int i = 1; i < s.length; i++) {
@@ -395,11 +401,32 @@ public class IndexerInvertedDoconly extends Indexer {
 		}
 		return 0;
 	}
-
+	
 	@Override
 	public int documentTermFrequency(String term, String url) {
 		int docid = _docMap.get(url).intValue();
 		return getDocumentIndexed(docid).getTermFrequencyMap().get(term);
 	}
 
+	public static void main(String[] args) throws IOException {
+		Options option = new Options("conf/engine.conf");
+		IndexerInvertedDoconly in = new IndexerInvertedDoconly(option);
+		Date d = new Date();
+		// in.constructIndex();
+		Query query = new Query("eddie 6 strings");
+		Long start = System.currentTimeMillis();
+		Document doc = in.nextDoc(query, 2);
+		Document doc2 = in.nextDoc(query, doc._docid);
+		Long end = System.currentTimeMillis();
+		System.out.println(doc._docid);
+		System.out.println(doc2._docid);
+		Date d1 = new Date();
+		System.out.println(start);
+		System.out.println(end);
+		// DocumentIndexed inh = new DocumentIndexed(45);
+		System.out.println(in.corpusTermFrequency("web"));
+		System.out.println(in.corpusTermFrequency("web"));
+		
+
+	}
 }
