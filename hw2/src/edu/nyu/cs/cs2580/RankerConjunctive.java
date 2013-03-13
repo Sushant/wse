@@ -21,6 +21,7 @@ public class RankerConjunctive extends Ranker {
     System.out.println("Using Ranker: " + this.getClass().getSimpleName());
   }
 
+  
   @Override
   public Vector<ScoredDocument> runQuery(Query query, int numResults) {
     Queue<ScoredDocument> rankQueue = new PriorityQueue<ScoredDocument>();

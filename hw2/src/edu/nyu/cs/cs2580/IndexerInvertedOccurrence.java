@@ -432,7 +432,9 @@ public class IndexerInvertedOccurrence extends Indexer {
 	in.loadIndex();
 	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
 	//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
-	Query q = new Query("\"about\"");
+
+	Query q = new Query("\"web\"");
+
 	
 	Document doc = null;
 	int docid = -1;
