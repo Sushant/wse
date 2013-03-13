@@ -1,5 +1,7 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.Scanner;
 import java.util.Vector;
 import java.util.regex.Pattern;

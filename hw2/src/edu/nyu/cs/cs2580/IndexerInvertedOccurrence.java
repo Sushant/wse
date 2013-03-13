@@ -198,7 +198,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 	Set<Integer> tokenDocSet = new HashSet<Integer>();
 	Set<Integer> finalDocSet = new HashSet<Integer>();
 	if (_queryDocSet.containsKey(queryStr)) {
-		System.out.println("Cache hit");
+		//System.out.println("Cache hit");
 		finalDocSet = _queryDocSet.get(queryStr);
 	} else {
 			QueryPhrase queryPhrase = new QueryPhrase(queryStr);
@@ -432,7 +432,7 @@ private Set<Integer> docSetFromTokens(Vector<String> tokens, int currentDocId) {
 	in.loadIndex();
 	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
 	//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
-	Query q = new Query("\"wikipedia\"");
+	Query q = new Query("\"web\"");
 	
 	Document doc = null;
 	int docid = -1;

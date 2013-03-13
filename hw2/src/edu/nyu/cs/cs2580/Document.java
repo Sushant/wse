@@ -28,7 +28,7 @@ class Document implements Serializable {
   private int _numViews = 0;
 
   public Document(int docid) {
-    _docid = docid;
+	  _docid = docid;
   }
 
   public String getTitle() {
