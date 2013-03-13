@@ -25,12 +25,14 @@ public class IndexerInvertedOccurrence extends Indexer {
 	private Map<String, Map<String, Map<Integer, List<Integer>>>> _characterMap;
 	private Map<String, Long> _docMap;
 	private Map<String, Set<Integer>> _queryDocSet; // Caching for nextDoc
+	private Map<String, Map<Integer, Integer>> _termOccurrencesMap; // Caching for docTermFrequency
 	
   public IndexerInvertedOccurrence(Options options) {
     super(options);
     _characterMap = new HashMap<String, Map<String, Map<Integer, List<Integer>>>>();
     _docMap = new HashMap<String, Long>();
     _queryDocSet = new HashMap<String, Set<Integer>>();
+    _termOccurrencesMap = new HashMap<String, Map<Integer,Integer>>();
     
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
   }
@@ -401,29 +403,43 @@ public class IndexerInvertedOccurrence extends Indexer {
   @Override
   //Number of times {@code term} appeared in the document {@code url}.
   public int documentTermFrequency(String term, String url) {
-    int docTermFrequency = 0;
     if (_docMap.containsKey(url)) {
     	int docId = _docMap.get(url).intValue();
-    	String prefix = Utility.getTermPrefix(term);
-  	  	List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
-  	  
-  	  	for (String docName: matchingDocs) {
-  		  String docPath = _options._indexPrefix + "/" + docName;
-  		  try {
-  			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
-  			if (wordMap.containsKey(term)) {
-  				Map<Integer, List<Integer>> docMap = wordMap.get(term);
-  				if (docMap.containsKey(docId)) {
-  					docTermFrequency += docMap.get(docId).size();
-  					break;
-  				}
-  			}
-  		  } catch (IOException e) {
-  			continue;
-  		  }
-  	  	}
+    	return documentTermFrequency(term, docId);
     }
-    return docTermFrequency;
+    return 0;
+  }
+  
+  private int documentTermFrequency(String term, int docId) {
+	  if (!_termOccurrencesMap.containsKey(term)) {
+		String prefix = Utility.getTermPrefix(term);
+	  	List<String> matchingDocs = Utility.getFileInDirectory(_options._indexPrefix, prefix, "idx");
+	  	Map<Integer, Integer> docFrequencyMap = new HashMap<Integer, Integer>();
+	  	for (String docName: matchingDocs) {
+		  String docPath = _options._indexPrefix + "/" + docName;
+		  try {
+			Map<String, Map<Integer, List<Integer>>> wordMap = _persistentStore.load(docPath);
+			if (wordMap.containsKey(term)) {
+				Map<Integer, List<Integer>> docMap = wordMap.get(term);
+				for (Integer dId: docMap.keySet()) {
+					docFrequencyMap.put(dId, docMap.get(dId).size());
+				}
+			}
+		  } catch (IOException e) {
+			continue;
+		  }
+	  	}
+	  	if (_termOccurrencesMap.size() == 10) {
+	  		_termOccurrencesMap.clear();
+	  	}
+	  	_termOccurrencesMap.put(term, docFrequencyMap);
+	  	System.out.println(_termOccurrencesMap);
+	  }
+	  try {
+		  return _termOccurrencesMap.get(term).get(docId);
+	  } catch (Exception e) {
+		  return 0;
+	  }
   }
   
   public static void main(String[] args) throws IOException, ClassNotFoundException {
