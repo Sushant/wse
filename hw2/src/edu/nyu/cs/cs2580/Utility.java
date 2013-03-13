@@ -29,7 +29,7 @@ class Utility {
 		CharTermAttribute cattr = stream.addAttribute(CharTermAttribute.class);
 		while (stream.incrementToken()) {
 			String stemmedToken = cattr.toString().trim();
-			if (stemmedToken.matches("[a-zA-Z0-9]*")) {
+			if (stemmedToken.matches("[a-zA-Z0-9']*")) {
 				stemmedToken = Stemmer.getStemmedWord(stemmedToken
 						.toLowerCase());
 				tempTokens.add(stemmedToken);
@@ -292,38 +292,9 @@ class Utility {
 
 	public static void main(String[] args) throws MalformedURLException,
 			IOException {
-		/*List<Integer> tempList = new ArrayList<Integer>();
-		Map<Integer, List<Integer>> map = new HashMap<Integer, List<Integer>>();
-		tempList.add(1);
-		tempList.add(7);
-		map.put(1, tempList);
-
-		tempList = new ArrayList<Integer>();
-		tempList.add(6);
-		tempList.add(17);
-		tempList.add(197);
-		map.put(2, tempList);
-
-		tempList = new ArrayList<Integer>();
-		tempList.add(1);
-		map.put(3, tempList);
-		System.out.println("Map -- " + map);
-		List<List<Byte>> list1 = createCompressedList(map);
-		System.out.println("CompressList -- " + list1);
-		System.out.println("Decompress -- " + createDecompressedMap(list1));
-		System.out.println(getFileInDirectory("data/index", "i", "dat"));*/
-		//nextMachedDoc("data/index", "york", 563, 300);
-		List<Integer> l1 = new ArrayList<Integer>();
-		l1.add(1);
-		l1.add(123);
-		l1.add(134);
-		
-		List<Integer> l2 = new ArrayList<Integer>();
-		/*l2.add(2);
-		l2.add(123);
-		l2.add(4);*/
-		l1.retainAll(l2);
-		System.out.println(l1);
+		String file = "data/wiki/Air_guitar";
+		String extracted = extractText(file);
+		System.out.println(tokenize(extracted).contains("chan"));
 	}
 
 }

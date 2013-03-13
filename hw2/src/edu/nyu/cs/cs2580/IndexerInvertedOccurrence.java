@@ -25,11 +25,14 @@ public class IndexerInvertedOccurrence extends Indexer {
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<String, Map<String, Map<Integer, List<Integer>>>> _characterMap;
 	private Map<String, Long> _docMap;
+	private Map<String, Set<Integer>> _queryDocSet; // Caching for nextDoc
 	
   public IndexerInvertedOccurrence(Options options) {
     super(options);
     _characterMap = new HashMap<String, Map<String, Map<Integer, List<Integer>>>>();
     _docMap = new HashMap<String, Long>();
+    _queryDocSet = new HashMap<String, Set<Integer>>();
+    
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
   }
 
@@ -180,9 +183,8 @@ public class IndexerInvertedOccurrence extends Indexer {
 		List<DocumentIndexed> docs = _persistentStore.loadDoc(fileName);
 		return docs.get(remainder);
 	} catch (Exception e) {
-		e.printStackTrace();
+		return null;
 	}
-	return null;
   }
 
   /**
@@ -192,36 +194,41 @@ public class IndexerInvertedOccurrence extends Indexer {
   public Document nextDoc(Query query, int docid) {
 	docid++;
 	String queryStr = query._query;
-	QueryPhrase queryPhrase = new QueryPhrase(queryStr);
-	queryPhrase.processQuery();
 	Set<Integer> phraseDocSet = new HashSet<Integer>();
 	Set<Integer> tokenDocSet = new HashSet<Integer>();
 	Set<Integer> finalDocSet = new HashSet<Integer>();
-	for (Vector<String> phrase: queryPhrase._phraseTokens) {
-		if (finalDocSet.isEmpty()) {
-			finalDocSet = docSetFromPhraseTokens(phrase, docid);
-		} else {
-			finalDocSet.retainAll(docSetFromPhraseTokens(phrase, docid));
-		}
-	}
-	if (!finalDocSet.isEmpty() && !queryPhrase._phraseTokens.isEmpty()) {
-		phraseDocSet.addAll(finalDocSet);
-		if (!queryPhrase._tokens.isEmpty()) {
-			tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
-			finalDocSet.retainAll(tokenDocSet);
-		}
+	if (_queryDocSet.containsKey(queryStr)) {
+		System.out.println("Cache hit");
+		finalDocSet = _queryDocSet.get(queryStr);
 	} else {
-		System.out.println("ELSE");
-		if (queryPhrase._phraseTokens.isEmpty()) {
-			tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
-			finalDocSet.addAll(tokenDocSet);
-		} else {
-			System.out.println("ELSE1");
-		}
-	}
-	
-	if (finalDocSet.isEmpty()) {
-		return null;
+			QueryPhrase queryPhrase = new QueryPhrase(queryStr);
+			queryPhrase.processQuery();
+
+			for (Vector<String> phrase : queryPhrase._phraseTokens) {
+				if (finalDocSet.isEmpty()) {
+					finalDocSet = docSetFromPhraseTokens(phrase, docid);
+				} else {
+					finalDocSet
+							.retainAll(docSetFromPhraseTokens(phrase, docid));
+				}
+			}
+			if (!finalDocSet.isEmpty() && !queryPhrase._phraseTokens.isEmpty()) {
+				phraseDocSet.addAll(finalDocSet);
+				if (!queryPhrase._tokens.isEmpty()) {
+					tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
+					finalDocSet.retainAll(tokenDocSet);
+				}
+			} else {
+				if (queryPhrase._phraseTokens.isEmpty()) {
+					tokenDocSet = docSetFromTokens(queryPhrase._tokens, docid);
+					finalDocSet.addAll(tokenDocSet);
+				}
+			}
+
+			if (finalDocSet.isEmpty()) {
+				return null;
+			}
+			_queryDocSet.put(queryStr, finalDocSet);
 	}
 	int nextDocId = getMinNextDocId(finalDocSet, docid);
 	if (nextDocId == -1) {
@@ -425,7 +432,7 @@ private Set<Integer> docSetFromTokens(Vector<String> tokens, int currentDocId) {
 	in.loadIndex();
 	//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
 	//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
-	Query q = new Query("\"Jerry Zucker films\"");
+	Query q = new Query("\"wikipedia\"");
 	
 	Document doc = null;
 	int docid = -1;
