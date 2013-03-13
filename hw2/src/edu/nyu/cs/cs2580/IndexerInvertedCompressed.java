@@ -125,12 +125,11 @@ public class IndexerInvertedCompressed extends Indexer {
   
   private Map<String, Map<Integer, List<Integer>>> loadWordMapFromFile(String indexFile) throws IOException {
 	  Map<String, List<List<Integer>>> tempStoredMap = _persistentStore.loadBytes(indexFile);
-	  System.out.println("Stored Map: " + tempStoredMap);
 		Map<String, Map<Integer, List<Integer>>> loadedWordMap = new HashMap<String, Map<Integer, List<Integer>>>();
 		for(Map.Entry<String, List<List<Integer>>> entry : tempStoredMap.entrySet()){
 			try {
 				Map<Integer,List<Integer>> tempIntMap = Utility.createDecompressedMap(entry.getValue());
-				System.out.println("Int Map: " + tempIntMap);
+				
 				loadedWordMap.put(entry.getKey(), tempIntMap);
 			} catch(Exception e) {
 				e.printStackTrace();
@@ -275,7 +274,6 @@ public class IndexerInvertedCompressed extends Indexer {
 				try {
 					String filepath = _options._indexPrefix + "/" + matchedIndexDoc;
 					Map<String, Map<Integer, List<Integer>>> wordMap = loadWordMapFromFile(filepath);
-					System.out.println("Word Map: " + wordMap);
 					if (wordMap.containsKey(t)) {
 						if (tokenMap.containsKey(t)) {
 							Map<Integer, List<Integer>> docMap = tokenMap.get(t);
@@ -463,7 +461,7 @@ public class IndexerInvertedCompressed extends Indexer {
 		in.loadIndex();
 		//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
 		//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
-		Query q = new Query("\"web\"");
+		Query q = new Query("\"deku chan\"");
 		
 		Document doc = null;
 		int docid = -1;

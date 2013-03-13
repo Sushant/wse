@@ -235,7 +235,7 @@ class Utility {
 		List<Integer> list = new ArrayList<Integer>();
 		for (List<Integer> b : list1) {
 			Integer normal = decompressFromListOfBytes(b);
-			//list.addAll(b);
+			list.add(normal);
 		}
 		while (size < list.size()) {
 			st = list.get(size);
