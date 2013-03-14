@@ -128,7 +128,13 @@ public class PersistentStore {
 				}.getType());
 		return docList;
 	}
-
+	public List<Document> loadDocForDocOnly(String filePath) throws IOException {
+		Reader reader = new InputStreamReader(new FileInputStream(filePath));
+		List<Document> docList = _gson.fromJson(reader,
+				new TypeToken<List<Document>>() {
+				}.getType());
+		return docList;
+	}
 	public void saveIndexMetadata(String filepath, Map<String, Long> dataMap)
 			throws IOException {
 		Writer writer = new OutputStreamWriter(new FileOutputStream(filepath));
