@@ -397,7 +397,10 @@ public class IndexerInvertedDoconly extends Indexer {
 				for (int i = 1; i < s.length; i++) {
 					tempList.add(Integer.parseInt(s[i]));
 				}
-				int value = tempList.get(0);
+				int value = 0;
+				if (!tempList.isEmpty()) {
+					value = tempList.get(0);
+				}
 				total += value;
 			}
 			if (_corpusTermFrequencyCache.size() < 50) {
