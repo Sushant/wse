@@ -3,8 +3,6 @@
 
 # Project
 bin
-*.log
-*.log.*
 
 # Eclipse
 .classpath
