@@ -15,7 +15,7 @@ public class DocumentIndexed extends Document {
 	private String fileNameOnDisk;
 	private int numberOfIncomingLinks = 0;
 	private int numberOfOutgoingLinks = 0;
-	private Set<Integer> listOfIncomingLinks = new HashSet<Integer>();
+	private Set<Integer> listOfOutgoingLinks = new HashSet<Integer>();
 	private Map<String, Integer> termFrequencyMap = new HashMap<String, Integer>();
 
 	public DocumentIndexed(int docid) {
@@ -55,17 +55,17 @@ public class DocumentIndexed extends Document {
 	}
 
 	public Set<Integer> getListOfOutgoingLinks() {
-		return listOfIncomingLinks;
+		return listOfOutgoingLinks;
 	}
 
-	public void setListOfIncomingLinks(Set<Integer> listOfIncomingLinks) {
-		this.listOfIncomingLinks = listOfIncomingLinks;
-		this.numberOfIncomingLinks = this.listOfIncomingLinks.size();
+	public void setListOfOutgoingLinks(Set<Integer> listOfOutgoingLinks) {
+		this.listOfOutgoingLinks = listOfOutgoingLinks;
+		this.numberOfIncomingLinks = this.listOfOutgoingLinks.size();
 	}
 
 	public void addElementsToListOfIncomingLinks(Integer linkId) {
-		this.listOfIncomingLinks.add(linkId);
-		this.numberOfIncomingLinks = this.listOfIncomingLinks.size();
+		this.listOfOutgoingLinks.add(linkId);
+		this.numberOfIncomingLinks = this.listOfOutgoingLinks.size();
 	}
 
 }

@@ -3,6 +3,7 @@ package edu.nyu.cs.cs2580;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -18,6 +19,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	private Map<String, Integer> _fileNameTodocumentIdMap = new HashMap<String, Integer>();
 	private Map<Integer, DocumentIndexed> _documentIdToDocumentMap = new HashMap<Integer, DocumentIndexed>();
 	private float _corpusSize = 0.0f;
+	private float lamda;
 
 	public CorpusAnalyzerPagerank(Options options) {
 		super(options);
@@ -64,18 +66,18 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 			String nextLink;
 			int docIdOfThisFile = _fileNameTodocumentIdMap.get(file);
 			int numberOfOutgoingLinks = 0;
+			Set<Integer> listOfOutgoingLinks = new HashSet<Integer>();
 			while ((nextLink = extract.getNextInCorpusLinkTarget()) != null) {
 				if (_fileNameTodocumentIdMap.containsKey(nextLink)) {
 					numberOfOutgoingLinks++;
 					Integer docId = _fileNameTodocumentIdMap.get(nextLink);
-					DocumentIndexed tempDoc = _documentIdToDocumentMap
-							.get(docId);
-					tempDoc.addElementsToListOfIncomingLinks(docIdOfThisFile);
+					listOfOutgoingLinks.add(docId);
 				}
 			}
 			DocumentIndexed tempDoc = _documentIdToDocumentMap
 					.get(docIdOfThisFile);
 			tempDoc.setNumberOfOutgoingLinks(numberOfOutgoingLinks);
+			tempDoc.setListOfOutgoingLinks(listOfOutgoingLinks);
 		}
 		_persist.saveFileMapForPageRankPrepare("data/FileMap.dat",
 				_fileNameTodocumentIdMap);
@@ -108,12 +110,43 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 		_documentIdToDocumentMap = _persist
 				.loaddocIdMapPageRankPrepare("data/DocumentMap.dat");
 		_corpusSize = _fileNameTodocumentIdMap.size();
+		float[] _I = new float[(int) _corpusSize];
+		float[] _R = new float[(int) _corpusSize];
+		for(int i = 0 ; i < _I.length ; i++){
+			_I[i] = (float)1.0 / _corpusSize;
+		}
+		for(int i = 0 ; i < _I.length ; i++){
+			_R[i] = (float)lamda / _corpusSize;
+		}
 		for (Entry<String, Integer> entry : _fileNameTodocumentIdMap.entrySet()) {
+			
 			DocumentIndexed document = _documentIdToDocumentMap.get(entry
 					.getValue());
-			float rank = pageRank((float) 0.1, document);
-			System.out.println(document.getFileNameOnDisk() + " : " + rank);
-			document.setPageRank(rank);
+			Set<Integer> listOfDocuments = document.getListOfOutgoingLinks();
+			float rank = document.getPageRank();
+			if (listOfDocuments.size() > 0) {
+				for (Integer doc : listOfDocuments) {
+					DocumentIndexed tempDoc = _documentIdToDocumentMap.get(doc);
+					int _id = tempDoc._docid;
+					_R[_id] = _R[_id]
+							+ ((1 - lamda) * rank / listOfDocuments.size());
+					tempDoc.setPageRank(_R[_id]);
+				}
+			} else {
+				for (Entry<String, Integer> entry1 : _fileNameTodocumentIdMap.entrySet()) {
+					DocumentIndexed tempDoc = _documentIdToDocumentMap.get(_fileNameTodocumentIdMap.get(entry1.getKey()));
+					int _id = tempDoc._docid;
+					_R[_id] = _R[_id]
+							+ ((1 - lamda) * rank / _corpusSize);
+					tempDoc.setPageRank(_R[_id]);
+				}
+			}
+			for(int i = 0 ; i < _I.length ; i++){
+				_I[i] = _R[i];
+				Document tempDoc = _documentIdToDocumentMap.get(i);
+				tempDoc.setPageRank(_R[i]);
+			}
+
 		}
 		return;
 	}
