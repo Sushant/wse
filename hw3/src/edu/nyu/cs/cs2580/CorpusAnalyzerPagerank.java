@@ -163,38 +163,6 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 		return null;
 	}
 
-	private float pageRank(float lamda, DocumentIndexed document) {
-		float rank = 0.0f;
-		float randomSelectionProbability = (float) lamda / _corpusSize;
-		if (document.getNumberOfOutgoingLinks() > 0) {
-			rank = randomSelectionProbability
-					+ (1 - lamda)
-					* calculateSummation(document.getListOfOutgoingLinks(),
-							true);
-		} else {
-			rank = randomSelectionProbability
-					+ (1 - lamda)
-					* calculateSummation(document.getListOfOutgoingLinks(),
-							false);
-		}
-
-		return rank;
-	}
-
-	private float calculateSummation(Set<Integer> list, boolean flag) {
-		float summation = 0.0f;
-		for (Integer doc : list) {
-			DocumentIndexed tempDoc = _documentIdToDocumentMap.get(doc);
-			float denominator = tempDoc.getNumberOfOutgoingLinks();
-			if (!flag) {
-				denominator = _corpusSize;
-			}
-			summation += (float) tempDoc.getPageRank() / denominator;
-		}
-
-		return summation;
-	}
-
 	public static void main(String[] args) throws IOException {
 		Options option = new Options("conf/engine.conf");
 		CorpusAnalyzerPagerank c = new CorpusAnalyzerPagerank(option);
