@@ -2,10 +2,11 @@ package edu.nyu.cs.cs2580;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -13,8 +14,10 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW3.
  */
 public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
+	private PersistentStore _persist = PersistentStore.getInstance();
 	private Map<String, Integer> _fileNameTodocumentIdMap = new HashMap<String, Integer>();
 	private Map<Integer, DocumentIndexed> _documentIdToDocumentMap = new HashMap<Integer, DocumentIndexed>();
+	private float _corpusSize = 0.0f;
 
 	public CorpusAnalyzerPagerank(Options options) {
 		super(options);
@@ -46,28 +49,41 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 				.getFilesInDirectory(_options._corpusPrefix);
 		int counter = 0;
 		DocumentIndexed doc;
+		_corpusSize = fileNames.size();
 		for (String file : fileNames) {
 			doc = new DocumentIndexed(counter);
 			doc.setFileNameOnDisk(file);
+			doc.setPageRank((float) (1.0 / _corpusSize));
 			_fileNameTodocumentIdMap.put(file, counter);
 			_documentIdToDocumentMap.put(counter, doc);
+			counter++;
 		}
-		System.out.println("DOne ...");
 		for (String file : fileNames) {
-			System.out.println("Preparing " + file);
 			HeuristicLinkExtractor extract = new HeuristicLinkExtractor(
 					new File(_options._corpusPrefix + "/" + file));
 			String nextLink;
 			int docIdOfThisFile = _fileNameTodocumentIdMap.get(file);
+			int numberOfOutgoingLinks = 0;
 			while ((nextLink = extract.getNextInCorpusLinkTarget()) != null) {
 				if (_fileNameTodocumentIdMap.containsKey(nextLink)) {
+					numberOfOutgoingLinks++;
 					Integer docId = _fileNameTodocumentIdMap.get(nextLink);
 					DocumentIndexed tempDoc = _documentIdToDocumentMap
 							.get(docId);
 					tempDoc.addElementsToListOfIncomingLinks(docIdOfThisFile);
 				}
 			}
+			DocumentIndexed tempDoc = _documentIdToDocumentMap
+					.get(docIdOfThisFile);
+			tempDoc.setNumberOfOutgoingLinks(numberOfOutgoingLinks);
 		}
+		_persist.saveFileMapForPageRankPrepare("data/FileMap.dat",
+				_fileNameTodocumentIdMap);
+		_persist.saveDocIdMapForPageRankPrepare("data/DocumentMap.dat",
+				_documentIdToDocumentMap);
+		_fileNameTodocumentIdMap.clear();
+		_documentIdToDocumentMap.clear();
+		System.out.println("Prepare finished.");
 		return;
 	}
 
@@ -87,6 +103,18 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	@Override
 	public void compute() throws IOException {
 		System.out.println("Computing using " + this.getClass().getName());
+		_fileNameTodocumentIdMap = _persist
+				.loadFileMapPageRankPrepare("data/FileMap.dat");
+		_documentIdToDocumentMap = _persist
+				.loaddocIdMapPageRankPrepare("data/DocumentMap.dat");
+		_corpusSize = _fileNameTodocumentIdMap.size();
+		for (Entry<String, Integer> entry : _fileNameTodocumentIdMap.entrySet()) {
+			DocumentIndexed document = _documentIdToDocumentMap.get(entry
+					.getValue());
+			float rank = pageRank((float) 0.1, document);
+			System.out.println(document.getFileNameOnDisk() + " : " + rank);
+			document.setPageRank(rank);
+		}
 		return;
 	}
 
@@ -102,9 +130,41 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 		return null;
 	}
 
+	private float pageRank(float lamda, DocumentIndexed document) {
+		float rank = 0.0f;
+		float randomSelectionProbability = (float) lamda / _corpusSize;
+		if (document.getNumberOfOutgoingLinks() > 0) {
+			rank = randomSelectionProbability
+					+ (1 - lamda)
+					* calculateSummation(document.getListOfOutgoingLinks(),
+							true);
+		} else {
+			rank = randomSelectionProbability
+					+ (1 - lamda)
+					* calculateSummation(document.getListOfOutgoingLinks(),
+							false);
+		}
+
+		return rank;
+	}
+
+	private float calculateSummation(Set<Integer> list, boolean flag) {
+		float summation = 0.0f;
+		for (Integer doc : list) {
+			DocumentIndexed tempDoc = _documentIdToDocumentMap.get(doc);
+			float denominator = tempDoc.getNumberOfOutgoingLinks();
+			if (!flag) {
+				denominator = _corpusSize;
+			}
+			summation += (float) tempDoc.getPageRank() / denominator;
+		}
+
+		return summation;
+	}
+
 	public static void main(String[] args) throws IOException {
 		Options option = new Options("conf/engine.conf");
 		CorpusAnalyzerPagerank c = new CorpusAnalyzerPagerank(option);
-		c.prepare();
+		c.compute();
 	}
 }

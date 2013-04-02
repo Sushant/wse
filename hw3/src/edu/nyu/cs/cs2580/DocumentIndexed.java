@@ -1,20 +1,21 @@
 package edu.nyu.cs.cs2580;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @CS2580: implement this class for HW2 to incorporate any additional
  *          information needed for your favorite ranker.
  */
 public class DocumentIndexed extends Document {
+	private static final long serialVersionUID = 9184892508124423115L;
 	private String fileNameOnDisk;
 	private int numberOfIncomingLinks = 0;
 	private int numberOfOutgoingLinks = 0;
-	private List<Integer> listOfIncomingLinks = new ArrayList<Integer>();
-	private static final long serialVersionUID = 9184892508124423115L;
+	private Set<Integer> listOfIncomingLinks = new HashSet<Integer>();
 	private Map<String, Integer> termFrequencyMap = new HashMap<String, Integer>();
 
 	public DocumentIndexed(int docid) {
@@ -53,16 +54,18 @@ public class DocumentIndexed extends Document {
 		this.numberOfOutgoingLinks = numberOfOutgoingLinks;
 	}
 
-	public List<Integer> getListOfOutgoingLinks() {
+	public Set<Integer> getListOfOutgoingLinks() {
 		return listOfIncomingLinks;
 	}
 
-	public void setListOfIncomingLinks(List<Integer> listOfIncomingLinks) {
+	public void setListOfIncomingLinks(Set<Integer> listOfIncomingLinks) {
 		this.listOfIncomingLinks = listOfIncomingLinks;
+		this.numberOfIncomingLinks = this.listOfIncomingLinks.size();
 	}
 
 	public void addElementsToListOfIncomingLinks(Integer linkId) {
 		this.listOfIncomingLinks.add(linkId);
+		this.numberOfIncomingLinks = this.listOfIncomingLinks.size();
 	}
 
 }
