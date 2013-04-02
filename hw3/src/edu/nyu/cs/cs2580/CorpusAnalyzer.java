@@ -118,4 +118,15 @@ public abstract class CorpusAnalyzer {
       return null;
     }
   }
+  public static void main(String[] args) throws IOException {
+	  File file = new File("_Country__Winston_Marshall");
+	  HeuristicLinkExtractor a = new HeuristicLinkExtractor(file);
+	  String s;
+	  int counter = 0;
+	  while((s = a.getNextInCorpusLinkTarget()) != null){
+		  System.out.println(s);
+		  counter++;
+	  }
+	  System.out.println(counter);
+}
 }
