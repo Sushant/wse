@@ -112,42 +112,50 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 		_corpusSize = _fileNameTodocumentIdMap.size();
 		float[] _I = new float[(int) _corpusSize];
 		float[] _R = new float[(int) _corpusSize];
-		for(int i = 0 ; i < _I.length ; i++){
-			_I[i] = (float)1.0 / _corpusSize;
+		for (int i = 0; i < _I.length; i++) {
+			_I[i] = (float) 1.0 / _corpusSize;
 		}
-		for(int i = 0 ; i < _I.length ; i++){
-			_R[i] = (float)lamda / _corpusSize;
+		for (int i = 0; i < _I.length; i++) {
+			_R[i] = (float) lamda / _corpusSize;
 		}
-		for (Entry<String, Integer> entry : _fileNameTodocumentIdMap.entrySet()) {
-			
-			DocumentIndexed document = _documentIdToDocumentMap.get(entry
-					.getValue());
-			Set<Integer> listOfDocuments = document.getListOfOutgoingLinks();
-			float rank = document.getPageRank();
-			if (listOfDocuments.size() > 0) {
-				for (Integer doc : listOfDocuments) {
-					DocumentIndexed tempDoc = _documentIdToDocumentMap.get(doc);
-					int _id = tempDoc._docid;
-					_R[_id] = _R[_id]
-							+ ((1 - lamda) * rank / listOfDocuments.size());
-					tempDoc.setPageRank(_R[_id]);
-				}
-			} else {
-				for (Entry<String, Integer> entry1 : _fileNameTodocumentIdMap.entrySet()) {
-					DocumentIndexed tempDoc = _documentIdToDocumentMap.get(_fileNameTodocumentIdMap.get(entry1.getKey()));
-					int _id = tempDoc._docid;
-					_R[_id] = _R[_id]
-							+ ((1 - lamda) * rank / _corpusSize);
-					tempDoc.setPageRank(_R[_id]);
-				}
-			}
-			for(int i = 0 ; i < _I.length ; i++){
-				_I[i] = _R[i];
-				Document tempDoc = _documentIdToDocumentMap.get(i);
-				tempDoc.setPageRank(_R[i]);
-			}
+		for (int j = 0; j < 2; j++) {
+			for (Entry<String, Integer> entry : _fileNameTodocumentIdMap
+					.entrySet()) {
 
+				DocumentIndexed document = _documentIdToDocumentMap.get(entry
+						.getValue());
+				Set<Integer> listOfDocuments = document
+						.getListOfOutgoingLinks();
+				float rank = document.getPageRank();
+				if (listOfDocuments.size() > 0) {
+					for (Integer doc : listOfDocuments) {
+						DocumentIndexed tempDoc = _documentIdToDocumentMap
+								.get(doc);
+						int _id = tempDoc._docid;
+						_R[_id] = _R[_id]
+								+ ((1 - lamda) * rank / listOfDocuments.size());
+						tempDoc.setPageRank(_R[_id]);
+					}
+				} else {
+					for (Entry<String, Integer> entry1 : _fileNameTodocumentIdMap
+							.entrySet()) {
+						DocumentIndexed tempDoc = _documentIdToDocumentMap
+								.get(_fileNameTodocumentIdMap.get(entry1
+										.getKey()));
+						int _id = tempDoc._docid;
+						_R[_id] = _R[_id] + ((1 - lamda) * rank / _corpusSize);
+						tempDoc.setPageRank(_R[_id]);
+					}
+				}
+				for (int i = 0; i < _I.length; i++) {
+					_I[i] = _R[i];
+					Document tempDoc = _documentIdToDocumentMap.get(i);
+					tempDoc.setPageRank(_R[i]);
+				}
+
+			}
 		}
+
 		return;
 	}
 
