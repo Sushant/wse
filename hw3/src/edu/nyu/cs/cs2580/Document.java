@@ -24,6 +24,7 @@ import java.util.Set;
  */
 class Document implements Serializable {
   private static final long serialVersionUID = -539495106357836976L;
+  private int totalWords = 0;
 
   /**
    * A simple checker to see if a given document is present in our corpus.
@@ -103,5 +104,13 @@ class Document implements Serializable {
 
   public void setNumViews(int numViews) {
     this._numViews = numViews;
+  }
+  
+  public int getTotalWordsInDoc() {
+	return totalWords;
+  }
+	
+  public void setTotalWordsInDoc(int totalWordsInDoc) {
+	this.totalWords = totalWordsInDoc; 
   }
 }
