@@ -7,6 +7,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -67,6 +68,21 @@ class Utility {
 		}
 		return files;
 	}
+	
+	
+	public static List<String> getFileInDirectory(String directory, String extension) {
+		File folder = new File(directory);
+		List<String> files = new ArrayList<String>();
+		
+		for (final File fileEntry : folder.listFiles()) {
+			String filename = fileEntry.getName();
+			if (filename.endsWith(extension)) {
+				files.add(filename);
+			}
+		}
+		return files;
+	}
+
 	
 	public static List<String> getFileInDirectory(String directory, String prefix, String extension) {
 		File folder = new File(directory);
@@ -219,6 +235,24 @@ class Utility {
 		}
 		return "";
 	}
+	
+	public static void saveFileNameToDocIdMap(String corpusDir) {
+		PersistentStore _persistentStore = PersistentStore.getInstance();
+		int counter = 0;
+		Map<String, Integer> _fileNameTodocumentIdMap = new HashMap<String, Integer>();
+		List<String> fileNames = getFilesInDirectory(corpusDir);
+		for (String file : fileNames) {
+			_fileNameTodocumentIdMap.put(file, counter);
+			counter++;
+		}
+		try {
+			_persistentStore.saveFileMapForPageRankPrepare("data/FileMap.dat", _fileNameTodocumentIdMap);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 
 	public static void main(String[] args) throws MalformedURLException,
 			IOException {
