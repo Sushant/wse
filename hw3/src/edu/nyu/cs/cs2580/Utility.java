@@ -7,8 +7,14 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+
 import java.util.HashMap;
+
+import java.util.Collections;
+import java.util.Comparator;
+
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +36,8 @@ class Utility {
 		while (stream.incrementToken()) {
 			String stemmedToken = cattr.toString().trim();
 			if (stemmedToken.matches("[a-zA-Z0-9']*")) {
-				stemmedToken = Stemmer.getStemmedWord(stemmedToken.toLowerCase());
+				stemmedToken = Stemmer.getStemmedWord(stemmedToken
+						.toLowerCase());
 				tempTokens.add(stemmedToken);
 			}
 		}
@@ -68,6 +75,7 @@ class Utility {
 		}
 		return files;
 	}
+
 	
 	
 	public static List<String> getFileInDirectory(String directory, String extension) {
@@ -85,9 +93,10 @@ class Utility {
 
 	
 	public static List<String> getFileInDirectory(String directory, String prefix, String extension) {
+
 		File folder = new File(directory);
 		List<String> files = new ArrayList<String>();
-		
+
 		for (final File fileEntry : folder.listFiles()) {
 			String filename = fileEntry.getName();
 			if (filename.endsWith(extension) && filename.startsWith(prefix)) {
@@ -101,14 +110,14 @@ class Utility {
 		String st = Integer.toBinaryString(input);
 		int size = st.length();
 		int index = 0;
-		//System.out.println("Size " + st.length());
+		// System.out.println("Size " + st.length());
 		int iteration = size / 8;
 		int padding = 8 - (size % 8);
-		String[] binary = new String[iteration+1];
+		String[] binary = new String[iteration + 1];
 		int begin = size - 8;
 		int end = size;
-		//System.out.println(iteration);
-		while (iteration > 0){
+		// System.out.println(iteration);
+		while (iteration > 0) {
 			binary[index] = st.substring(begin, end);
 			end = begin;
 			begin = begin - 8;
@@ -116,42 +125,45 @@ class Utility {
 			index++;
 		}
 		String temp = "";
-		while(padding > 0){
+		while (padding > 0) {
 			temp += "0";
 			padding--;
 		}
-		temp += st.substring(0,end);
+		temp += st.substring(0, end);
 		binary[index] = temp;
 		List<Integer> returnList = new ArrayList<Integer>();
-		for(int i = binary.length - 1 ; i >= 0 ; i--){
-			//System.out.println(binary[i]);
-			int tempByte = Integer.parseInt(binary[i],2);
+		for (int i = binary.length - 1; i >= 0; i--) {
+			// System.out.println(binary[i]);
+			int tempByte = Integer.parseInt(binary[i], 2);
 			returnList.add((tempByte));
 		}
-		//System.out.println(returnList);
+		// System.out.println(returnList);
 		return returnList;
 	}
-	private static int decompressFromListOfBytes(List<Integer> list){
-		String binary ="";
-		for(Integer integer : list){
+
+	private static int decompressFromListOfBytes(List<Integer> list) {
+		String binary = "";
+		for (Integer integer : list) {
 			int i = integer;
-			if(integer < 1){
-			i = integer * -1;
+			if (integer < 1) {
+				i = integer * -1;
 			}
 			String temp = Integer.toBinaryString(i);
 			int size = temp.length();
 			int padding = 8 - size;
 			char[] pads = new char[padding];
-			Arrays.fill(pads,'0');
+			Arrays.fill(pads, '0');
 			String padString = new String(pads);
 			temp = padString + temp;
 			binary += temp;
 		}
-		//System.out.println(binary);
+		// System.out.println(binary);
 		return Integer.parseInt(binary, 2);
 	}
-	public static List<List<Integer>> createCompressedList(Map<Integer, List<Integer>> map) {
-	//	System.out.println(map);
+
+	public static List<List<Integer>> createCompressedList(
+			Map<Integer, List<Integer>> map) {
+		// System.out.println(map);
 		List<Integer> returnList = new ArrayList<Integer>();
 		Integer nextKey = 0;
 		for (Map.Entry<Integer, List<Integer>> entry : map.entrySet()) {
@@ -164,7 +176,7 @@ class Utility {
 				returnList.add(tempList.get(i) - tempList.get(i - 1));
 			}
 		}
-	//	System.out.println(returnList);
+		// System.out.println(returnList);
 		List<List<Integer>> compressList = new ArrayList<List<Integer>>();
 		for (Integer s : returnList) {
 			List<Integer> tempList = compressByte(s);
@@ -190,7 +202,7 @@ class Utility {
 			lastSt = st;
 			size = size + 1;
 			int tempSize = list.get(size);
-			//System.out.println("size:" + tempSize);
+			// System.out.println("size:" + tempSize);
 			size++;
 			int temp = 0;
 			List<Integer> tempList = new ArrayList<Integer>();
@@ -213,19 +225,21 @@ class Utility {
 		}
 		return map;
 	}
-	
+
 	public static String getTermPrefix(String term) {
-		  if (term.length() >= 2) {
-			  return term.substring(0, 2);
-		  } else {
-		  	  return term.substring(0, 1);
-		  }
-	  }
-	
-	// Given a term and doc Id, we need to find what index file we need to look into
-	public static String nextMachedDoc(String directory, String term, int docId, int bulk_doc_write_size) {
+		if (term.length() >= 2) {
+			return term.substring(0, 2);
+		} else {
+			return term.substring(0, 1);
+		}
+	}
+
+	// Given a term and doc Id, we need to find what index file we need to look
+	// into
+	public static String nextMachedDoc(String directory, String term,
+			int docId, int bulk_doc_write_size) {
 		String prefix = getTermPrefix(term);
-		
+
 		List<String> matchedDocs = getFileInDirectory(directory, prefix, "idx");
 		int quotient = docId / bulk_doc_write_size;
 		int docFile = quotient + 1;
@@ -259,5 +273,53 @@ class Utility {
 		String file = "data/wiki/Air_guitar";
 		String extracted = extractText(file);
 		System.out.println(tokenize(extracted).contains("chan"));
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static Map<Integer, Integer> sortMapByIntegerValues(
+			Map<Integer, Integer> myMap) {
+		ArrayList as = new ArrayList(myMap.entrySet());
+		Collections.sort(as, new Comparator() {
+			public int compare(Object o1, Object o2) {
+				Map.Entry e1 = (Map.Entry) o1;
+				Map.Entry e2 = (Map.Entry) o2;
+				Integer first = (Integer) e1.getValue();
+				Integer second = (Integer) e2.getValue();
+				return second.compareTo(first);
+			}
+		});
+
+		Map<Integer, Integer> my = new LinkedHashMap<Integer, Integer>();
+		Iterator i = as.iterator();
+		while (i.hasNext()) {
+			String i1 = i.next().toString();
+			String[] split = i1.split("=");
+			my.put(Integer.parseInt(split[0]), Integer.parseInt(split[1]));
+		}
+		return my;
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static Map<Integer, Float> sortMapByFloatValues(
+			Map<Integer, Float> myMap) {
+		ArrayList as = new ArrayList(myMap.entrySet());
+		Collections.sort(as, new Comparator() {
+			public int compare(Object o1, Object o2) {
+				Map.Entry e1 = (Map.Entry) o1;
+				Map.Entry e2 = (Map.Entry) o2;
+				Float first = (Float) e1.getValue();
+				Float second = (Float) e2.getValue();
+				return second.compareTo(first);
+			}
+		});
+
+		Map<Integer, Float> my = new LinkedHashMap<Integer, Float>();
+		Iterator i = as.iterator();
+		while (i.hasNext()) {
+			String i1 = i.next().toString();
+			String[] split = i1.split("=");
+			my.put(Integer.parseInt(split[0]), Float.parseFloat(split[1]));
+		}
+		return my;
 	}
 }
