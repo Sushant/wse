@@ -4,6 +4,7 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -102,20 +103,6 @@ public class PersistentStore {
 		return returnMap;
 	}
 
-	/*
-	 * public Map<Integer, List<Integer>> loadDocMap(String filepath, String
-	 * word) throws IOException { Map<String, Map<Integer, List<Integer>>>
-	 * loadedWordMap = load(filepath); if (loadedWordMap.containsKey(word)) {
-	 * return loadedWordMap.get(word); } return new HashMap<Integer,
-	 * List<Integer>>(); }
-	 * 
-	 * public void saveDocMap(String filepath, String word, Map<Integer,
-	 * List<Integer>> docMap) throws IOException { Map<String, Map<Integer,
-	 * List<Integer>>> loadedWordMap; try { loadedWordMap = load(filepath); }
-	 * catch (IOException e) { loadedWordMap = new HashMap<String, Map<Integer,
-	 * List<Integer>>>(); } loadedWordMap.put(word, docMap); save(filepath,
-	 * loadedWordMap); }
-	 */
 
 	public void saveDoc(String filePath, List<Document> doc) throws IOException {
 		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath));
@@ -208,5 +195,20 @@ public class PersistentStore {
 				}.getType());
 		reader.close();
 		return docIdMap;
+	}
+	
+	public void saveDocNumViewsMap(String filePath, Map<Integer, Integer>docNumViewsMap) throws IOException {
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath));
+		_gson.toJson(docNumViewsMap, writer);
+		writer.close();
+	}
+	
+	public Map<Integer, Integer> loadDocNumViewsMap(String filePath) throws IOException {
+		Reader reader = new InputStreamReader(new FileInputStream(filePath));
+		Map<Integer, Integer> docNumViewsMap = _gson.fromJson(reader,
+				new TypeToken<Map<Integer,Integer>>() {
+				}.getType());
+		reader.close();
+		return docNumViewsMap;
 	}
 }
