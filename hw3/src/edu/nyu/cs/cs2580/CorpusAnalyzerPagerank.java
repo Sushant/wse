@@ -19,7 +19,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	private Map<String, Integer> _fileNameTodocumentIdMap = new HashMap<String, Integer>();
 	private Map<Integer, DocumentIndexed> _documentIdToDocumentMap = new HashMap<Integer, DocumentIndexed>();
 	private float _corpusSize = 0.0f;
-	private float lamda;
+	private float lamda = 0.9f;
 
 	public CorpusAnalyzerPagerank(Options options) {
 		super(options);
@@ -110,15 +110,16 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 		_documentIdToDocumentMap = _persist
 				.loaddocIdMapPageRankPrepare("data/DocumentMap.dat");
 		_corpusSize = _fileNameTodocumentIdMap.size();
-		float[] _I = new float[(int) _corpusSize];
-		float[] _R = new float[(int) _corpusSize];
+		double[] _I = new double[(int) _corpusSize];
+		double[] _R = new double[(int) _corpusSize];
 		for (int i = 0; i < _I.length; i++) {
 			_I[i] = (float) 1.0 / _corpusSize;
 		}
-		for (int i = 0; i < _I.length; i++) {
-			_R[i] = (float) lamda / _corpusSize;
-		}
+		
 		for (int j = 0; j < 2; j++) {
+			for (int i = 0; i < _I.length; i++) {
+				_R[i] = lamda / _corpusSize;
+			}
 			for (Entry<String, Integer> entry : _fileNameTodocumentIdMap
 					.entrySet()) {
 
@@ -133,8 +134,7 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 								.get(doc);
 						int _id = tempDoc._docid;
 						_R[_id] = _R[_id]
-								+ ((1 - lamda) * rank / listOfDocuments.size());
-						tempDoc.setPageRank(_R[_id]);
+								+ ((1.0f - lamda) * rank / listOfDocuments.size());
 					}
 				} else {
 					for (Entry<String, Integer> entry1 : _fileNameTodocumentIdMap
@@ -143,19 +143,25 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 								.get(_fileNameTodocumentIdMap.get(entry1
 										.getKey()));
 						int _id = tempDoc._docid;
-						_R[_id] = _R[_id] + ((1 - lamda) * rank / _corpusSize);
-						tempDoc.setPageRank(_R[_id]);
+						_R[_id] = _R[_id] + ((1.0f - lamda) * rank / _corpusSize);
 					}
 				}
 				for (int i = 0; i < _I.length; i++) {
 					_I[i] = _R[i];
 					Document tempDoc = _documentIdToDocumentMap.get(i);
-					tempDoc.setPageRank(_R[i]);
+					tempDoc.setPageRank((float)_R[i]);
 				}
 
 			}
 		}
-
+		for(Entry<Integer,DocumentIndexed> entry : _documentIdToDocumentMap.entrySet()){
+			System.out.println("Doc... " +"ID:"+entry.getValue()._docid+" "+ entry.getValue().getFileNameOnDisk() +" ... "+entry.getValue().getPageRank()+(entry.getValue().getPageRank() * 100000));
+		}
+		System.out.println("Corpus Size... " + _documentIdToDocumentMap.size());
+		_persist.saveDocIdMapForPageRankPrepare("data/DocumentRank.dat",
+				_documentIdToDocumentMap);
+		_documentIdToDocumentMap.clear();
+		_fileNameTodocumentIdMap.clear();
 		return;
 	}
 
