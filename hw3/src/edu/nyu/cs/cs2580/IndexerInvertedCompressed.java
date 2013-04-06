@@ -23,7 +23,7 @@ public class IndexerInvertedCompressed extends Indexer {
 	// Stores all Document in memory.
 	final int BULK_DOC_PROCESSING_SIZE = 300;
 	final int BULK_DOC_WRITE_SIZE = 100;
-	final String NAME_TO_DOCID_FILE = "data/NameDocIdMap.dat";
+	final String NAME_TO_DOCID_FILE = "data/index/nameDocIdMap.dat";
 	final String METADATA_FILE = "index.dat";
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<String, Map<String, Map<Integer, List<Integer>>>> _characterMap;

@@ -18,8 +18,8 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class LogMinerNumviews extends LogMiner {
 	private PersistentStore _persist = PersistentStore.getInstance();
 	private Map<String, Integer>_fileNameTodocumentIdMap;
-	private final String NAME_TO_DOCID_FILE = "data/NameDocIdMap.dat";
-	private final String NUMVIEWS_FILE = "data/NumViewsMap.dat";
+	private final String NAME_TO_DOCID_FILE = "data/index/nameDocIdMap.dat";
+	private final String NUMVIEWS_FILE = "data/index/numViewsMap.dat";
 
   public LogMinerNumviews(Options options) {
     super(options);

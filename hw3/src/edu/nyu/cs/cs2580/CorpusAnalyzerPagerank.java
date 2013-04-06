@@ -20,9 +20,9 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	private Map<Integer, DocumentIndexed> _corpusGraph = new HashMap<Integer, DocumentIndexed>();
 	private float _corpusSize = 0.0f;
 	private float lamda = 0.9f;
-	private final String CORPUS_GRAPH_FILE = "data/CorpusGraph.dat";
-	private final String NAME_TO_DOCID_FILE = "data/NameDocIdMap.dat";
-	private final String PAGE_RANK_FILE = "data/PageRankMap.dat";
+	private final String CORPUS_GRAPH_FILE = "data/index/corpusGraph.dat";
+	private final String NAME_TO_DOCID_FILE = "data/index/nameDocIdMap.dat";
+	private final String PAGE_RANK_FILE = "data/index/pageRankMap.dat";
 
 	public CorpusAnalyzerPagerank(Options options) {
 		super(options);
