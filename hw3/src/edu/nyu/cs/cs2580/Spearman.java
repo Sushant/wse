@@ -15,15 +15,9 @@ public class Spearman {
 		try {
 			String pageRankFile = args[0];
 			String numViewsFile = args[1];
-			Map<Integer, DocumentIndexed> tempPageRankMap = _persist
-					.loaddocIdMapPageRankPrepare(pageRankFile);
-			Map<Integer, Float> pageRankMap = new HashMap<Integer, Float>();
-			Map<Integer, Integer> numViewsMap = _persist
-					.loadDocNumViewsMap(numViewsFile);
-			for (Map.Entry<Integer, DocumentIndexed> entry : tempPageRankMap
-					.entrySet()) {
-				pageRankMap.put(entry.getKey(), entry.getValue().getPageRank());
-			}
+			Map<Integer, Float> pageRankMap = _persist.loadPageRankMap(pageRankFile);
+			Map<Integer, Integer> numViewsMap = _persist.loadDocNumViewsMap(numViewsFile);
+
 			pageRankMap = Utility.sortMapByFloatValues(pageRankMap);
 			numViewsMap = Utility.sortMapByIntegerValues(numViewsMap);
 			_pageRankArray = new int[pageRankMap.size()];
@@ -41,6 +35,7 @@ public class Spearman {
 			}
 
 			sigma = calculateCorrelation();
+			System.out.println(sigma);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
