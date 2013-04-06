@@ -44,7 +44,7 @@ public class PersistentStore {
 		return INSTANCE;
 	}
 
-	public void save(String filepath,
+	public void save(String filePath,
 			Map<String, Map<Integer, List<Integer>>> indexMap)
 			throws IOException {
 		Map<String, Map<String, List<String>>> storedMap = new HashMap<String, Map<String, List<String>>>();
@@ -63,7 +63,7 @@ public class PersistentStore {
 			}
 			storedMap.put(entry.getKey(), storeMap);
 		}
-		Writer writer = new OutputStreamWriter(new FileOutputStream(filepath));
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath), "UTF8");
 		_gson.toJson(storedMap, writer);
 		writer.close();
 	}
@@ -126,9 +126,9 @@ public class PersistentStore {
 		return docList;
 	}
 
-	public void saveIndexMetadata(String filepath, Map<String, Long> dataMap)
+	public void saveIndexMetadata(String filePath, Map<String, Long> dataMap)
 			throws IOException {
-		Writer writer = new OutputStreamWriter(new FileOutputStream(filepath));
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath), "UTF8");
 		_gson.toJson(dataMap, writer);
 		writer.close();
 	}
@@ -145,9 +145,9 @@ public class PersistentStore {
 		return dataMap;
 	}
 
-	public void saveBytes(String filepath,
+	public void saveBytes(String filePath,
 			Map<String, List<List<Integer>>> byteMap) throws IOException {
-		Writer writer = new OutputStreamWriter(new FileOutputStream(filepath));
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath), "UTF8");
 		_gson.toJson(byteMap, writer);
 		writer.close();
 	}
@@ -165,31 +165,30 @@ public class PersistentStore {
 
 	public void saveFileMapForPageRankPrepare(String filePath,
 			Map<String, Integer> fileMap) throws IOException {
-		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath));
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath), "UTF8");
 		_gson.toJson(fileMap, writer);
 		writer.close();
 	}
 
 	public Map<String, Integer> loadFileMapPageRankPrepare(String filePath)
 			throws IOException {
-		Reader reader = new InputStreamReader(new FileInputStream(filePath));
-		Map<String, Integer> fileMap = _gson.fromJson(reader,
-				new TypeToken<Map<String, Integer>>() {
-				}.getType());
+		System.out.println("FilePath: " + filePath);
+		Reader reader = new InputStreamReader(new FileInputStream(filePath), "UTF8");
+		Map<String, Integer> fileMap = _gson.fromJson(reader, new TypeToken<Map<String, Integer>>() {}.getType());
 		reader.close();
 		return fileMap;
 	}
 
 	public void saveDocIdMapForPageRankPrepare(String filePath,
 			Map<Integer, DocumentIndexed> documentIdMap) throws IOException {
-		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath));
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath), "UTF8");
 		_gson.toJson(documentIdMap, writer);
 		writer.close();
 	}
 
 	public Map<Integer,DocumentIndexed> loaddocIdMapPageRankPrepare(String filePath)
 			throws IOException {
-		Reader reader = new InputStreamReader(new FileInputStream(filePath));
+		Reader reader = new InputStreamReader(new FileInputStream(filePath), "UTF8");
 		Map<Integer,DocumentIndexed> docIdMap = _gson.fromJson(reader,
 				new TypeToken<Map<Integer,DocumentIndexed>>() {
 				}.getType());
@@ -198,17 +197,30 @@ public class PersistentStore {
 	}
 	
 	public void saveDocNumViewsMap(String filePath, Map<Integer, Integer>docNumViewsMap) throws IOException {
-		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath));
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath), "UTF8");
 		_gson.toJson(docNumViewsMap, writer);
 		writer.close();
 	}
 	
 	public Map<Integer, Integer> loadDocNumViewsMap(String filePath) throws IOException {
-		Reader reader = new InputStreamReader(new FileInputStream(filePath));
+		Reader reader = new InputStreamReader(new FileInputStream(filePath), "UTF8");
 		Map<Integer, Integer> docNumViewsMap = _gson.fromJson(reader,
 				new TypeToken<Map<Integer,Integer>>() {
 				}.getType());
 		reader.close();
 		return docNumViewsMap;
+	}
+	
+	public void savePageRankMap(String filePath, Map<Integer, Float> pageRankMap) throws IOException {
+		Writer writer = new OutputStreamWriter(new FileOutputStream(filePath), "UTF8");
+		_gson.toJson(pageRankMap, writer);
+		writer.close();
+	}
+	
+	public Map<Integer, Float> loadPageRankMap(String filePath) throws IOException {
+		Reader reader = new InputStreamReader(new FileInputStream(filePath), "UTF8");
+		Map<Integer, Float> pageRankMap = _gson.fromJson(reader, new TypeToken<Map<Integer, Float>>() {}.getType());
+		reader.close();
+		return pageRankMap;
 	}
 }

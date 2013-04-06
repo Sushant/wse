@@ -48,6 +48,7 @@ public abstract class Indexer {
     _options = options;
     _corpusAnalyzer = CorpusAnalyzer.Factory.getCorpusAnalyzerByOption(options);
     _logMiner = LogMiner.Factory.getLogMinerByOption(options);
+    _persistentStore = PersistentStore.getInstance();
   }
 
   // APIs for document retrieval.

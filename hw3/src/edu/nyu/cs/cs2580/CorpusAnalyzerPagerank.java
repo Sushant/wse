@@ -17,14 +17,26 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	private PersistentStore _persist = PersistentStore.getInstance();
 	private Map<String, Integer> _fileNameTodocumentIdMap = new HashMap<String, Integer>();
-	private Map<Integer, DocumentIndexed> _documentIdToDocumentMap = new HashMap<Integer, DocumentIndexed>();
+	private Map<Integer, DocumentIndexed> _corpusGraph = new HashMap<Integer, DocumentIndexed>();
 	private float _corpusSize = 0.0f;
 	private float lamda = 0.9f;
+	private final String CORPUS_GRAPH_FILE = "data/CorpusGraph.dat";
+	private final String NAME_TO_DOCID_FILE = "data/NameDocIdMap.dat";
+	private final String PAGE_RANK_FILE = "data/PageRankMap.dat";
 
 	public CorpusAnalyzerPagerank(Options options) {
 		super(options);
 	}
 
+	private void _loadFileToDocIdMap() throws IOException {
+		  try {
+		    	_fileNameTodocumentIdMap =  _persist.loadFileMapPageRankPrepare(NAME_TO_DOCID_FILE);
+		  } catch (IOException ie) {
+			  Utility.saveFileNameToDocIdMap(_options._corpusPrefix, NAME_TO_DOCID_FILE);
+			  _fileNameTodocumentIdMap =  _persist.loadFileMapPageRankPrepare(NAME_TO_DOCID_FILE);
+		  }
+	 }
+	
 	/**
 	 * This function processes the corpus as specified inside {@link _options}
 	 * and extracts the "internal" graph structure from the pages inside the
@@ -47,8 +59,8 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	@Override
 	public void prepare() throws IOException {
 		System.out.println("Preparing " + this.getClass().getName());
-		List<String> fileNames = Utility
-				.getFilesInDirectory(_options._corpusPrefix);
+		_loadFileToDocIdMap();
+		List<String> fileNames = Utility.getFilesInDirectory(_options._corpusPrefix);
 		int counter = 0;
 		DocumentIndexed doc;
 		_corpusSize = fileNames.size();
@@ -56,15 +68,19 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 			doc = new DocumentIndexed(counter);
 			doc.setFileNameOnDisk(file);
 			doc.setPageRank((float) (1.0 / _corpusSize));
-			_fileNameTodocumentIdMap.put(file, counter);
-			_documentIdToDocumentMap.put(counter, doc);
+			_corpusGraph.put(counter, doc);
 			counter++;
 		}
 		for (String file : fileNames) {
-			HeuristicLinkExtractor extract = new HeuristicLinkExtractor(
-					new File(_options._corpusPrefix + "/" + file));
+			HeuristicLinkExtractor extract = new HeuristicLinkExtractor(new File(_options._corpusPrefix + "/" + file));
 			String nextLink;
-			int docIdOfThisFile = _fileNameTodocumentIdMap.get(file);
+			int docIdOfThisFile;
+			try {
+				docIdOfThisFile = _fileNameTodocumentIdMap.get(file);
+			} catch (Exception e) {
+				System.out.println(file + " failed.");
+				continue;
+			}
 			int numberOfOutgoingLinks = 0;
 			Set<Integer> listOfOutgoingLinks = new HashSet<Integer>();
 			while ((nextLink = extract.getNextInCorpusLinkTarget()) != null) {
@@ -74,17 +90,13 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 					listOfOutgoingLinks.add(docId);
 				}
 			}
-			DocumentIndexed tempDoc = _documentIdToDocumentMap
-					.get(docIdOfThisFile);
+			DocumentIndexed tempDoc = _corpusGraph.get(docIdOfThisFile);
 			tempDoc.setNumberOfOutgoingLinks(numberOfOutgoingLinks);
 			tempDoc.setListOfOutgoingLinks(listOfOutgoingLinks);
 		}
-		_persist.saveFileMapForPageRankPrepare("data/FileMap.dat",
-				_fileNameTodocumentIdMap);
-		_persist.saveDocIdMapForPageRankPrepare("data/DocumentMap.dat",
-				_documentIdToDocumentMap);
+		_persist.saveDocIdMapForPageRankPrepare(CORPUS_GRAPH_FILE, _corpusGraph);
 		_fileNameTodocumentIdMap.clear();
-		_documentIdToDocumentMap.clear();
+		_corpusGraph.clear();
 		System.out.println("Prepare finished.");
 		return;
 	}
@@ -105,10 +117,8 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	@Override
 	public void compute() throws IOException {
 		System.out.println("Computing using " + this.getClass().getName());
-		_fileNameTodocumentIdMap = _persist
-				.loadFileMapPageRankPrepare("data/FileMap.dat");
-		_documentIdToDocumentMap = _persist
-				.loaddocIdMapPageRankPrepare("data/DocumentMap.dat");
+		_fileNameTodocumentIdMap = _persist.loadFileMapPageRankPrepare(NAME_TO_DOCID_FILE);
+		_corpusGraph = _persist.loaddocIdMapPageRankPrepare(CORPUS_GRAPH_FILE);
 		_corpusSize = _fileNameTodocumentIdMap.size();
 		double[] _I = new double[(int) _corpusSize];
 		double[] _R = new double[(int) _corpusSize];
@@ -120,49 +130,49 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 			for (int i = 0; i < _I.length; i++) {
 				_R[i] = lamda / _corpusSize;
 			}
-			for (Entry<String, Integer> entry : _fileNameTodocumentIdMap
-					.entrySet()) {
+			for (Entry<String, Integer> entry : _fileNameTodocumentIdMap.entrySet()) {
 
-				DocumentIndexed document = _documentIdToDocumentMap.get(entry
+				DocumentIndexed document = _corpusGraph.get(entry
 						.getValue());
-				Set<Integer> listOfDocuments = document
-						.getListOfOutgoingLinks();
+				Set<Integer> listOfDocuments = document.getListOfOutgoingLinks();
 				float rank = document.getPageRank();
 				if (listOfDocuments.size() > 0) {
 					for (Integer doc : listOfDocuments) {
-						DocumentIndexed tempDoc = _documentIdToDocumentMap
+						DocumentIndexed tempDoc = _corpusGraph
 								.get(doc);
 						int _id = tempDoc._docid;
 						_R[_id] = _R[_id]
 								+ ((1.0f - lamda) * rank / listOfDocuments.size());
 					}
 				} else {
-					for (Entry<String, Integer> entry1 : _fileNameTodocumentIdMap
-							.entrySet()) {
-						DocumentIndexed tempDoc = _documentIdToDocumentMap
-								.get(_fileNameTodocumentIdMap.get(entry1
-										.getKey()));
+					for (Entry<String, Integer> entry1 : _fileNameTodocumentIdMap.entrySet()) {
+						DocumentIndexed tempDoc = _corpusGraph.get(_fileNameTodocumentIdMap.get(entry1.getKey()));
 						int _id = tempDoc._docid;
 						_R[_id] = _R[_id] + ((1.0f - lamda) * rank / _corpusSize);
 					}
 				}
 				for (int i = 0; i < _I.length; i++) {
 					_I[i] = _R[i];
-					Document tempDoc = _documentIdToDocumentMap.get(i);
+					Document tempDoc = _corpusGraph.get(i);
 					tempDoc.setPageRank((float)_R[i]);
 				}
 
 			}
 		}
-		for(Entry<Integer,DocumentIndexed> entry : _documentIdToDocumentMap.entrySet()){
-			System.out.println("Doc... " +"ID:"+entry.getValue()._docid+" "+ entry.getValue().getFileNameOnDisk() +" ... "+entry.getValue().getPageRank()+(entry.getValue().getPageRank() * 100000));
-		}
-		System.out.println("Corpus Size... " + _documentIdToDocumentMap.size());
-		_persist.saveDocIdMapForPageRankPrepare("data/DocumentRank.dat",
-				_documentIdToDocumentMap);
-		_documentIdToDocumentMap.clear();
+		
+		System.out.println("Corpus Size... " + _corpusGraph.size());
+		_savePageRankMap();
+		_corpusGraph.clear();
 		_fileNameTodocumentIdMap.clear();
 		return;
+	}
+	
+	private void _savePageRankMap() throws IOException {
+		Map<Integer, Float> _pageRankMap = new HashMap<Integer, Float>();
+		for (DocumentIndexed doc: _corpusGraph.values()) {
+			_pageRankMap.put(doc._docid, doc.getPageRank());
+		}
+		_persist.savePageRankMap(PAGE_RANK_FILE, _pageRankMap);
 	}
 
 	/**
@@ -173,13 +183,13 @@ public class CorpusAnalyzerPagerank extends CorpusAnalyzer {
 	 */
 	@Override
 	public Object load() throws IOException {
-		System.out.println("Loading using " + this.getClass().getName());
-		return null;
+		return _persist.loadPageRankMap(PAGE_RANK_FILE);
 	}
 
 	public static void main(String[] args) throws IOException {
 		Options option = new Options("conf/engine.conf");
 		CorpusAnalyzerPagerank c = new CorpusAnalyzerPagerank(option);
+		c.prepare();
 		c.compute();
 	}
 }

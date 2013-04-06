@@ -3,6 +3,8 @@
 
 # Project
 bin
+*.dat
+*.conf
 
 # Eclipse
 .classpath

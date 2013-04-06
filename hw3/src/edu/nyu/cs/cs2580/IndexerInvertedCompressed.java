@@ -11,6 +11,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 
+import javax.print.attribute.standard.PageRanges;
+
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 /**
@@ -21,12 +23,17 @@ public class IndexerInvertedCompressed extends Indexer {
 	// Stores all Document in memory.
 	final int BULK_DOC_PROCESSING_SIZE = 300;
 	final int BULK_DOC_WRITE_SIZE = 100;
+	final String NAME_TO_DOCID_FILE = "data/NameDocIdMap.dat";
 	final String METADATA_FILE = "index.dat";
 	private Vector<Document> _documents = new Vector<Document>();
 	private Map<String, Map<String, Map<Integer, List<Integer>>>> _characterMap;
 	private Map<String, Long> _docMap;
 	private Map<String, Set<Integer>> _queryDocSet; // Caching for nextDoc
 	private Map<String, Map<Integer, Integer>> _termOccurrencesMap; // Caching for docTermFrequency
+	
+	private Map<Integer, Integer> _numViewsmap;
+	private Map<Integer, Float> _pageRankMap;
+	private Map<String, Integer>_fileNameTodocumentIdMap;
 	
   public IndexerInvertedCompressed(Options options) {
     super(options);
@@ -38,9 +45,23 @@ public class IndexerInvertedCompressed extends Indexer {
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
   }
 
+  @SuppressWarnings("unchecked")
+  private void loadMaps() throws IOException {
+	  try {
+	    	_fileNameTodocumentIdMap = _persistentStore.loadFileMapPageRankPrepare(NAME_TO_DOCID_FILE);
+	  } catch (Exception e) {
+		  Utility.saveFileNameToDocIdMap(_options._corpusPrefix, NAME_TO_DOCID_FILE);
+		  _fileNameTodocumentIdMap = _persistentStore.loadFileMapPageRankPrepare(NAME_TO_DOCID_FILE);
+	  }
+	  _pageRankMap = (Map<Integer, Float>) _corpusAnalyzer.load();
+	  _numViewsmap = (Map<Integer, Integer>) _logMiner.load();
+	  
+  }
   @Override
   public void constructIndex() throws IOException {
+	  loadMaps();
 	  List<String> documents = Utility.getFilesInDirectory(_options._corpusPrefix);
+	  
 	  for (String filename: documents) {
 		  processDocument(filename);
 		  if (_numDocs % BULK_DOC_WRITE_SIZE == 0) {
@@ -178,6 +199,12 @@ public class IndexerInvertedCompressed extends Indexer {
 	  DocumentIndexed doc = new DocumentIndexed(docId);
 	  doc.setUrl(docName);
 	  doc.setTotalWordsInDoc(tokens.size());
+	  if (_numViewsmap.containsKey(docId)) {
+		  doc.setNumViews(_numViewsmap.get(docId));
+	  } else {
+		  doc.setNumViews(0);
+	  }
+	  doc.setPageRank(_pageRankMap.get(docId));
 	  _documents.add(doc);
 	  _docMap.put(docName, new Long(docId));
 	  _totalTermFrequency = _totalTermFrequency + tokens.size();
@@ -475,10 +502,11 @@ public class IndexerInvertedCompressed extends Indexer {
   public static void main(String[] args) throws IOException, ClassNotFoundException {
 	  Options option = new Options("conf/engine.conf");
 		IndexerInvertedCompressed in = new IndexerInvertedCompressed(option);
-		in.loadIndex();
+		in.constructIndex();
+		//in.loadIndex();
 		//System.out.println(in.corpusDocFrequencyByTerm("wikipedia"));
 		//System.out.println(in.documentTermFrequency("0814736521", "Nickelodeon_(TV_channel)"));
-		Query q = new Query("\"new\"");
+		/*Query q = new Query("\"new\"");
 		
 		Document doc = null;
 		int docid = -1;
@@ -489,7 +517,7 @@ public class IndexerInvertedCompressed extends Indexer {
 			System.out.println(docid + " " + doc.getUrl());
 			in.documentTermFrequency("new", doc.getUrl());
 		}
-		System.out.println("Count:  " + counter);
+		System.out.println("Count:  " + counter);*/
 	  }
   }
 

@@ -17,6 +17,9 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 public class LogMinerNumviews extends LogMiner {
 	private PersistentStore _persist = PersistentStore.getInstance();
+	private Map<String, Integer>_fileNameTodocumentIdMap;
+	private final String NAME_TO_DOCID_FILE = "data/NameDocIdMap.dat";
+	private final String NUMVIEWS_FILE = "data/NumViewsMap.dat";
 
   public LogMinerNumviews(Options options) {
     super(options);
@@ -39,20 +42,23 @@ public class LogMinerNumviews extends LogMiner {
   public void compute() throws IOException {
     System.out.println("Computing using " + this.getClass().getName());
     List<String> logFiles = Utility.getFileInDirectory(_options._logPrefix, ".log");
-    Map<String, Integer>_fileNameTodocumentIdMap;
-    try {
-    	_fileNameTodocumentIdMap =  _persist.loadFileMapPageRankPrepare("data/FileMap.dat");
-    } catch (IOException ie) {
-    	Utility.saveFileNameToDocIdMap(_options._corpusPrefix);
-    	_fileNameTodocumentIdMap =  _persist.loadFileMapPageRankPrepare("data/FileMap.dat");
-    }
-    _computeNumViews(logFiles, _fileNameTodocumentIdMap);
-    //System.out.println(logFiles);
-    //System.out.println(_fileNameTodocumentIdMap);
+    
+    _loadFileToDocIdMap();
+    _computeNumViews(logFiles);
     return;
   }
 
-  private void _computeNumViews(List<String> logFiles, Map<String, Integer> _fileNameTodocumentIdMap) {
+  
+  private void _loadFileToDocIdMap() throws IOException {
+	  try {
+	    	_fileNameTodocumentIdMap =  _persist.loadFileMapPageRankPrepare(NAME_TO_DOCID_FILE);
+	  } catch (IOException ie) {
+		  Utility.saveFileNameToDocIdMap(_options._corpusPrefix, NAME_TO_DOCID_FILE);
+		  _fileNameTodocumentIdMap =  _persist.loadFileMapPageRankPrepare(NAME_TO_DOCID_FILE);
+	  } 
+  }
+  
+  private void _computeNumViews(List<String> logFiles) {
 	  BufferedReader reader;
 	  Map<Integer, Integer> docNumViewsMap = new HashMap<Integer, Integer>();
 	  for (String logFile : logFiles) {
@@ -91,7 +97,7 @@ public class LogMinerNumviews extends LogMiner {
 		}
 	  }
 	  try {
-		  _persist.saveDocNumViewsMap("data/NumViewsMap.dat", docNumViewsMap);
+		  _persist.saveDocNumViewsMap(NUMVIEWS_FILE, docNumViewsMap);
 	  } catch (IOException e) {
 		  System.out.println("Failed to save num views map");
 		  e.printStackTrace();
@@ -106,7 +112,7 @@ public class LogMinerNumviews extends LogMiner {
    */
   @Override
   public Object load() throws IOException {
-    return _persist.loadDocNumViewsMap("data/NumViewsMap.dat");
+    return _persist.loadDocNumViewsMap(NUMVIEWS_FILE);
   }
   
   public static void main(String[] args) throws IOException {

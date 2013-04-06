@@ -3,8 +3,10 @@ package edu.nyu.cs.cs2580;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -64,7 +66,8 @@ class Utility {
 		File folder = new File(directory);
 		List<String> files = new ArrayList<String>();
 		for (final File fileEntry : folder.listFiles()) {
-			files.add(fileEntry.getName());
+			String filename = fileEntry.getName();
+			files.add(filename);
 		}
 		return files;
 	}
@@ -223,7 +226,7 @@ class Utility {
 	  }
 	
 	// Given a term and doc Id, we need to find what index file we need to look into
-	public static String nextMachedDoc(String directory, String term, int docId, int bulk_doc_write_size) {
+	public static String nextMachedDoc(String directory, String term, int docId, int bulk_doc_write_size) throws IOException {
 		String prefix = getTermPrefix(term);
 		
 		List<String> matchedDocs = getFileInDirectory(directory, prefix, "idx");
@@ -236,7 +239,7 @@ class Utility {
 		return "";
 	}
 	
-	public static void saveFileNameToDocIdMap(String corpusDir) {
+	public static void saveFileNameToDocIdMap(String corpusDir, String filePath) throws IOException {
 		PersistentStore _persistentStore = PersistentStore.getInstance();
 		int counter = 0;
 		Map<String, Integer> _fileNameTodocumentIdMap = new HashMap<String, Integer>();
@@ -245,8 +248,9 @@ class Utility {
 			_fileNameTodocumentIdMap.put(file, counter);
 			counter++;
 		}
+		//System.out.println("Map size: " + _fileNameTodocumentIdMap.size());
 		try {
-			_persistentStore.saveFileMapForPageRankPrepare("data/FileMap.dat", _fileNameTodocumentIdMap);
+			_persistentStore.saveFileMapForPageRankPrepare(filePath, _fileNameTodocumentIdMap);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
