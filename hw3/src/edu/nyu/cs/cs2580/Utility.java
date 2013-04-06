@@ -318,7 +318,6 @@ class Utility {
 	public static Set<String> returnUniqueSet(List<String> fileNames)
 			throws MalformedURLException, IOException {
 		Set<String> uniqueTerms = new HashSet<String>();
-		fileNames = getFileInDirectory("data/wiki", "");
 		for (String file : fileNames) {
 			String extractedText = extractText("data/wiki/"+file);
 			List<String> listOfStrings = tokenize(extractedText);
