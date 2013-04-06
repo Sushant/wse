@@ -322,4 +322,13 @@ class Utility {
 		}
 		return my;
 	}
+	public static Set<String> returnUniqueSet(List<String> fileNames) throws MalformedURLException, IOException{
+		Set<String> uniqueTerms = new HashSet<String>();
+		for(String file : fileNames){
+			String extractedText = extractText(file);
+			List<String> listOfStrings = tokenize(extractedText);
+			uniqueTerms.addAll(listOfStrings);
+		}
+		return uniqueTerms;
+	}
 }
