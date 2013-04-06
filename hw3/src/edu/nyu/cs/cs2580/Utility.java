@@ -76,12 +76,11 @@ class Utility {
 		return files;
 	}
 
-	
-	
-	public static List<String> getFileInDirectory(String directory, String extension) {
+	public static List<String> getFileInDirectory(String directory,
+			String extension) {
 		File folder = new File(directory);
 		List<String> files = new ArrayList<String>();
-		
+
 		for (final File fileEntry : folder.listFiles()) {
 			String filename = fileEntry.getName();
 			if (filename.endsWith(extension)) {
@@ -91,8 +90,8 @@ class Utility {
 		return files;
 	}
 
-	
-	public static List<String> getFileInDirectory(String directory, String prefix, String extension) {
+	public static List<String> getFileInDirectory(String directory,
+			String prefix, String extension) {
 
 		File folder = new File(directory);
 		List<String> files = new ArrayList<String>();
@@ -249,7 +248,7 @@ class Utility {
 		}
 		return "";
 	}
-	
+
 	public static void saveFileNameToDocIdMap(String corpusDir) {
 		PersistentStore _persistentStore = PersistentStore.getInstance();
 		int counter = 0;
@@ -260,19 +259,12 @@ class Utility {
 			counter++;
 		}
 		try {
-			_persistentStore.saveFileMapForPageRankPrepare("data/FileMap.dat", _fileNameTodocumentIdMap);
+			_persistentStore.saveFileMapForPageRankPrepare("data/FileMap.dat",
+					_fileNameTodocumentIdMap);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-	
-
-	public static void main(String[] args) throws MalformedURLException,
-			IOException {
-		String file = "data/wiki/Air_guitar";
-		String extracted = extractText(file);
-		System.out.println(tokenize(extracted).contains("chan"));
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -322,10 +314,13 @@ class Utility {
 		}
 		return my;
 	}
-	public static Set<String> returnUniqueSet(List<String> fileNames) throws MalformedURLException, IOException{
+
+	public static Set<String> returnUniqueSet(List<String> fileNames)
+			throws MalformedURLException, IOException {
 		Set<String> uniqueTerms = new HashSet<String>();
-		for(String file : fileNames){
-			String extractedText = extractText(file);
+		fileNames = getFileInDirectory("data/wiki", "");
+		for (String file : fileNames) {
+			String extractedText = extractText("data/wiki/"+file);
 			List<String> listOfStrings = tokenize(extractedText);
 			uniqueTerms.addAll(listOfStrings);
 		}
