@@ -490,7 +490,7 @@ public class IndexerInvertedCompressed extends Indexer {
 	  		_termOccurrencesMap.clear();
 	  	}
 	  	_termOccurrencesMap.put(term, docFrequencyMap);
-	  	System.out.println(_termOccurrencesMap);
+	  //	System.out.println(_termOccurrencesMap);
 	  }
 	  try {
 		  return _termOccurrencesMap.get(term).get(docId);

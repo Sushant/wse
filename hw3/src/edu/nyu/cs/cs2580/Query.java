@@ -14,7 +14,14 @@ import java.util.Vector;
  * @auhtor fdiaz
  */
 public class Query {
-  public String _query = null;
+  @Override
+	public String toString() {
+		return "Query [_query=" + _query + ", _tokens=" + _tokens
+				+ ", getClass()=" + getClass() + ", hashCode()=" + hashCode()
+				+ ", toString()=" + super.toString() + "]";
+	}
+
+public String _query = null;
   public Vector<String> _tokens = new Vector<String>();
 
   public Query(String query) {

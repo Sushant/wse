@@ -60,7 +60,7 @@ class Utility {
 	}
 
 	public static String extractText(String url) throws MalformedURLException,
-			IOException {
+	IOException {
 		String sourceUrlString = url;
 		if (sourceUrlString.indexOf(':') == -1)
 			sourceUrlString = "file:" + sourceUrlString;
@@ -229,13 +229,13 @@ class Utility {
 	}
 
 	public static String getTermPrefix(String term) {
-		  if (term.length() >= 2) {
-			  return term.substring(0, 2);
-		  } else {
-		  	  return term.substring(0, 1);
-		  }
-	  }
-	
+		if (term.length() >= 2) {
+			return term.substring(0, 2);
+		} else {
+			return term.substring(0, 1);
+		}
+	}
+
 	// Given a term and doc Id, we need to find what index file we need to look into
 	public static String nextMachedDoc(String directory, String term, int docId, int bulk_doc_write_size) throws IOException {
 		String prefix = getTermPrefix(term);
@@ -249,7 +249,7 @@ class Utility {
 		}
 		return "";
 	}
-	
+
 	public static void saveFileNameToDocIdMap(String corpusDir, String filePath) throws IOException {
 
 		PersistentStore _persistentStore = PersistentStore.getInstance();
@@ -317,14 +317,22 @@ class Utility {
 		return my;
 	}
 
-	public static Set<String> returnUniqueSet(List<String> fileNames)
+	public static Map<String,Integer> returnUniqueSet(List<String> fileNames)
 			throws MalformedURLException, IOException {
-		Set<String> uniqueTerms = new HashSet<String>();
+		Map<String,Integer> uniqueTermsMap = new HashMap<String,Integer>();
 		for (String file : fileNames) {
 			String extractedText = extractText("data/wiki/"+file);
 			List<String> listOfStrings = tokenize(extractedText);
-			uniqueTerms.addAll(listOfStrings);
+			for(String s : listOfStrings){
+				if(uniqueTermsMap.containsKey(s)){
+					int temp = uniqueTermsMap.get(s);
+					uniqueTermsMap.put(s, (temp+1));
+				}else{
+					uniqueTermsMap.put(s, 1);
+				}
+			}
 		}
-		return uniqueTerms;
+		return uniqueTermsMap;
 	}
+
 }
