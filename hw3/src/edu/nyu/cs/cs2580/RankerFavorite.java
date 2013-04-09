@@ -70,8 +70,8 @@ public class RankerFavorite extends Ranker {
     }
     Collections.sort(results, Collections.reverseOrder());
     Date end = new Date();
-    System.out.println("start---------"+ start);
-    System.out.println("end---------"+ end);
+  //  System.out.println("start---------"+ start);
+   // System.out.println("end---------"+ end);
     return results;
   }
   
