@@ -58,9 +58,10 @@ public class LogMinerNumviews extends LogMiner {
 	  } 
   }
   
+  
   private void _computeNumViews(List<String> logFiles) {
 	  BufferedReader reader;
-	  Map<Integer, Integer> docNumViewsMap = new HashMap<Integer, Integer>();
+	  Map<Integer, Integer> docNumViewsMap = initializeNumViewsMap();
 	  for (String logFile : logFiles) {
 		try {
 			reader = new BufferedReader(new FileReader(_options._logPrefix + "/" + logFile));
@@ -102,6 +103,14 @@ public class LogMinerNumviews extends LogMiner {
 		  System.out.println("Failed to save num views map");
 		  e.printStackTrace();
 	  }
+}
+
+private Map<Integer, Integer> initializeNumViewsMap() {
+	Map<Integer, Integer> docNumViewsMap = new HashMap<Integer, Integer>();
+	for (Integer docId : _fileNameTodocumentIdMap.values()) {
+		docNumViewsMap.put(docId, 0);
+	}
+	return docNumViewsMap;
 }
 
 /**
