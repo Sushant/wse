@@ -320,19 +320,27 @@ class Utility {
 	public static Map<String,Integer> returnUniqueSet(List<String> fileNames)
 			throws MalformedURLException, IOException {
 		Map<String,Integer> uniqueTermsMap = new HashMap<String,Integer>();
+		Set<String> stopWords = new HashSet<String>(Arrays.asList(new String[] { "a", "b", "c", 
+				 "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "i", "o", "p", "q", "r",
+				 "s", "t", "u", "v", "w", "x", "y", "z", "the", "an","and","of","to","with","and",
+				 "as", "in", "on", "by", "it", "is", "or", "she", "he", "her", "him","had", "all",
+				 "at", "you", "all", "other" ,"that",
+				"for", "from", "1", "2" ,"3" ,"4", "5", "6","7","8","9","0" }));
 		for (String file : fileNames) {
 			String extractedText = extractText("data/wiki/"+file);
 			List<String> listOfStrings = tokenize(extractedText);
 			for(String s : listOfStrings){
-				if(uniqueTermsMap.containsKey(s)){
-					int temp = uniqueTermsMap.get(s);
-					uniqueTermsMap.put(s, (temp+1));
-				}else{
-					uniqueTermsMap.put(s, 1);
+				boolean Exists = stopWords.contains(s);
+				if(!Exists){
+					if(uniqueTermsMap.containsKey(s)){
+						int temp = uniqueTermsMap.get(s);
+						uniqueTermsMap.put(s, (temp+1));
+					}else{
+						uniqueTermsMap.put(s, 1);
+					}
 				}
 			}
 		}
 		return uniqueTermsMap;
 	}
-
 }
