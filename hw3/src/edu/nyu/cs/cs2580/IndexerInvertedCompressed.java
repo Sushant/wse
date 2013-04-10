@@ -21,7 +21,7 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class IndexerInvertedCompressed extends Indexer {
 
 	// Stores all Document in memory.
-	final int BULK_DOC_PROCESSING_SIZE = 300;
+	final int BULK_DOC_PROCESSING_SIZE = 200;
 	final int BULK_DOC_WRITE_SIZE = 100;
 	final String NAME_TO_DOCID_FILE = "data/index/nameDocIdMap.dat";
 	final String METADATA_FILE = "index.dat";
@@ -101,7 +101,7 @@ public class IndexerInvertedCompressed extends Indexer {
 	  String corpusFile = _options._corpusPrefix + "/" + filename;
 	  int docId = _numDocs;
 	  String document = Utility.extractText(corpusFile);
-	  List<String> stemmedTokens = Utility.tokenize(document);
+	  List<String> stemmedTokens = Utility.getStemmed(document);
 	  buildMapFromTokens(docId, filename, stemmedTokens);
 	  _numDocs++;
   }

@@ -48,7 +48,7 @@ public class Bhattacharyya {
 	private static Map<String, Double> readFile(String fileName)
 			throws FileNotFoundException {
 		Map<String, Double> queryRepresentationMap = new HashMap<String, Double>();
-		File file = new File("data/PRF/" + fileName);
+		File file = new File(fileName+".TSV");
 		Scanner scan = new Scanner(file);
 		while (scan.hasNext()) {
 			String line = scan.nextLine();
