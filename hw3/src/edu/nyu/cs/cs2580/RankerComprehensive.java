@@ -28,7 +28,10 @@ public class RankerComprehensive extends Ranker {
 	Float numOfWordsColl = (float)_indexer.totalTermFrequency();
 	Map <String, Float> c_qi_Map = new HashMap <String, Float>();  
 	Vector<String> qv = new Vector<String>();
-
+	final double betaQL = 1.0;
+	final double betaNumViews = 0.00000001;
+	final double betaPageRank = Math.pow(10, -9);
+	
 	@Override
 	public Vector<ScoredDocument> runQuery(Query query, int numResults) {
 		Queue<ScoredDocument> rankQueue = new PriorityQueue<ScoredDocument>();
@@ -81,6 +84,7 @@ public class RankerComprehensive extends Ranker {
 		float numOfWordsDoc = (float)d.getTotalWordsInDoc();  
 		float lambda = (float) 0.5;
 		float f_qi, c_qi;
+		
 		// Create Representation for query. //
 		// ///////////////////////////////////////////////////////////////////////
 		for (String title : qv) {
@@ -105,7 +109,8 @@ public class RankerComprehensive extends Ranker {
 
 		// Query Likelihood ///
 		score = (float) Math.pow(2, score);
-		//System.out.println("score--------"+score);
+		//System.out.println("NumViews-"+ d.getNumViews() * 0.00001+ "----pagerank-" + d.getPageRank() * Math.pow(2, 7)+ "--------score--"+score );
+		score = (float) ((score * betaQL)  + (d.getNumViews() * betaNumViews ) + (d.getPageRank() * betaPageRank ));
 		return new ScoredDocument(d , score);
 	}
 

@@ -180,6 +180,12 @@ class QueryHandler implements HttpHandler {
 			Vector<ScoredDocument> scoredDocs =
 					ranker.runQuery(processedQuery, cgiArgs._numResults);
 			StringBuffer response = new StringBuffer();
+			/*
+			for (ScoredDocument it : scoredDocs) {
+				Document temp = it.get_doc();
+				response.append(temp.getUrl()+"\t" + temp.getPageRank()  +"\n");
+			}*/
+
 			switch (cgiArgs._outputFormat) {
 			case TEXT:
 				constructTextOutput(scoredDocs, response);

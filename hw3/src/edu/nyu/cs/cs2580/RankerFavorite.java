@@ -35,7 +35,7 @@ public class RankerFavorite extends Ranker {
     Document doc = null;
     int docid = -1;
     Date start = new Date();
-    ////////////////////// Construction of Query Vector///////////////////////////////////
+    ////////////////////////Construction of Query Vector///////////////////////////////////
     Scanner s1 = new Scanner(query._query);
 	Pattern pattern = Pattern.compile(
 	   "\"[^\"]*\"" );
