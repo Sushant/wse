@@ -37,3 +37,7 @@ hw2/grep4j-1.6.5.jar
 hw3/data/wiki
 
 hw3/data/wiki
+
+*.swp
+
+*.tsv

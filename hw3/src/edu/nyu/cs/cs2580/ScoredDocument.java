@@ -19,7 +19,9 @@ class ScoredDocument implements Comparable<ScoredDocument> {
     StringBuffer buf = new StringBuffer();
     buf.append(get_doc()._docid).append("\t");
     buf.append(get_doc().getTitle()).append("\t");
-    buf.append(_score);
+    buf.append(_score).append("\t");
+    buf.append(get_doc().getNumViews()).append("\t");
+    buf.append(get_doc().getPageRank()).append("\t");
     return buf.toString();
   }
 
@@ -27,7 +29,13 @@ class ScoredDocument implements Comparable<ScoredDocument> {
    * @CS2580: Student should implement {@code asHtmlResult} for final project.
    */
   public String asHtmlResult() {
-    return "";
+	StringBuffer buf = new StringBuffer();
+	Document doc = get_doc();
+    buf.append("<span style=\"font-size:12px;font-weight:bold;\">").append(doc.getTitle()).append("</span><br />");
+    buf.append("<span style=\"font-size:11px;\">").append("Score: " + _score).append("</span><br />");
+    buf.append("<span style=\"font-size:11px;\">").append("Views: " + doc.getNumViews()).append("</span><br />");
+    buf.append("<span style=\"font-size:11px;\">").append("Page Rank: " + doc.getPageRank()).append("</span><br />");
+    return buf.toString();
   }
 
   @Override

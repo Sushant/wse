@@ -106,14 +106,6 @@ class QueryRepresentation {
 			result.put(item.term, item.count);
 		}
 		
-		// Saving To File
-		PrintWriter out = new PrintWriter(new File(PRF_DIR + query._query + ".TSV"));
-	//	PrintWriter out = new PrintWriter(new File(prf_prefix + query._query + ".TSV"));
-		for (Map.Entry<String,Double> entry : result.entrySet()) {
-			out.println(entry.getKey() + "\t" + entry.getValue());
-		}
-		out.close();
-
 		return result;
 	}
 

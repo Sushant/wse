@@ -58,10 +58,6 @@ class Utility {
 		TokenStream stream = analyze(input);
 		CharTermAttribute cattr = stream.addAttribute(CharTermAttribute.class);
 		while (stream.incrementToken()) {
-			if (cattr.toString().trim() == "google"
-					|| cattr.toString().trim() == "Google") {
-				System.out.println("Google Present!!");
-			}
 			String stemmedToken = cattr.toString().trim();
 			if (stemmedToken.matches("[a-zA-Z0-9']*")) {
 				stemmedToken = Stemmer.getStemmedWord(stemmedToken

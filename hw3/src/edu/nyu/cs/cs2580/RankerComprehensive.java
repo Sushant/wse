@@ -29,8 +29,8 @@ public class RankerComprehensive extends Ranker {
 	Map <String, Float> c_qi_Map = new HashMap <String, Float>();  
 	Vector<String> qv = new Vector<String>();
 	final double betaQL = 1.0;
-	final double betaNumViews = 0.00000001;
-	final double betaPageRank = Math.pow(10, -9);
+	final double betaNumViews = Math.pow(10, -9);
+	final double betaPageRank = Math.pow(10, -8);
 	
 	@Override
 	public Vector<ScoredDocument> runQuery(Query query, int numResults) {

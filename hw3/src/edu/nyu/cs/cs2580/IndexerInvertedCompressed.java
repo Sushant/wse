@@ -197,6 +197,7 @@ public class IndexerInvertedCompressed extends Indexer {
 			tokenIndex++;
 	  }
 	  DocumentIndexed doc = new DocumentIndexed(docId);
+	  doc.setTitle(docName);
 	  doc.setUrl(docName);
 	  doc.setTotalWordsInDoc(tokens.size());
 	  if (_numViewsmap.containsKey(docId)) {

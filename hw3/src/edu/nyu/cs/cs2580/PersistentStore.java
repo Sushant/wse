@@ -172,7 +172,6 @@ public class PersistentStore {
 
 	public Map<String, Integer> loadFileMapPageRankPrepare(String filePath)
 			throws IOException {
-		System.out.println("FilePath: " + filePath);
 		Reader reader = new InputStreamReader(new FileInputStream(filePath), "UTF8");
 		Map<String, Integer> fileMap = _gson.fromJson(reader, new TypeToken<Map<String, Integer>>() {}.getType());
 		reader.close();
