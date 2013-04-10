@@ -2,6 +2,9 @@ package edu.nyu.cs.cs2580;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,27 +14,28 @@ import java.util.Scanner;
 import java.util.Set;
 
 public class Bhattacharyya {
-	public static void main(String[] args) throws FileNotFoundException {
+	public static void main(String[] args) throws IOException {
 		String pathToPrfOutput = args[0];
-		if(pathToPrfOutput.lastIndexOf("/") != pathToPrfOutput.length()-1){
-			pathToPrfOutput +="/";
-		}
 		String pathToOutput = args[1];
-		if(pathToOutput.lastIndexOf("/") != pathToOutput.length()-1){
-			pathToOutput +="/";
-		}
 		List<String> queryList = new ArrayList<String>();
-		File file = new File("data/queries.tsv");
+		Map<String,String> filePathMap = new HashMap<String,String>();
+		File file = new File(pathToPrfOutput);
 		Scanner scan = new Scanner(file);
 		while (scan.hasNext()) {
 			String next = scan.nextLine();
-			queryList.add(next);
+			String[] array = next.split(":");
+			String query = array[0];
+			String filePath = array[1];
+			queryList.add(query);
+			filePathMap.put(query,filePath);
 		}
+		File fileToWrite = new File(pathToOutput);
+		OutputStream out = new FileOutputStream(fileToWrite);
 		for (int i = 0; i < queryList.size(); i++) {
-			Map<String, Double> outerFileMap = readFile(pathToPrfOutput+queryList.get(i));
+			Map<String, Double> outerFileMap = readFile(filePathMap.get(queryList.get(i)));
 			for (int j = i + 1; j < queryList.size(); j++) {
 				double bhattacharya = 0;
-				Map<String, Double> innerFileMap = readFile(pathToPrfOutput+queryList.get(j));
+				Map<String, Double> innerFileMap = readFile(filePathMap.get(queryList.get(j)));
 				Set<String> set = createSet(outerFileMap, innerFileMap);
 				for (String word : set) {
 					double probabilityOuterMap = outerFileMap.get(word);
@@ -39,8 +43,12 @@ public class Bhattacharyya {
 					bhattacharya += Math
 							.sqrt((probabilityOuterMap * probabilityInnerFileMap));
 				}
-				System.out.println("QUERY1: " + queryList.get(i) + "QUERY2: "
-						+ queryList.get(j) + "COEFFICIENT: " + bhattacharya);
+				out.write(queryList.get(i).getBytes());
+				out.write("\t".getBytes());
+				out.write(queryList.get(j).getBytes());
+				out.write("\t".getBytes());
+				out.write(String.valueOf(bhattacharya).getBytes());
+				out.write("\n".getBytes());
 			}
 		}
 	}
@@ -48,7 +56,7 @@ public class Bhattacharyya {
 	private static Map<String, Double> readFile(String fileName)
 			throws FileNotFoundException {
 		Map<String, Double> queryRepresentationMap = new HashMap<String, Double>();
-		File file = new File(fileName+".TSV");
+		File file = new File(fileName);
 		Scanner scan = new Scanner(file);
 		while (scan.hasNext()) {
 			String line = scan.nextLine();
