@@ -3,24 +3,21 @@ package edu.nyu.cs.cs2580;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-
-import java.util.HashMap;
-
 import java.util.Collections;
 import java.util.Comparator;
-
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
+import java.util.Vector;
 
 import net.htmlparser.jericho.Source;
 
@@ -31,11 +28,40 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 
 class Utility {
+	public static List<String> getStemmed(String contents) {
+
+		if (contents == null) {
+			return null;
+		}
+
+		Vector<String> stemmedContents = new Vector<String>();
+
+		Scanner s = new Scanner(contents.toLowerCase());
+		s.useDelimiter("[^a-zA-Z0-9]");
+		while (s.hasNext()) {
+			String term = s.next();
+
+			Stemmer stemmer = new Stemmer();
+			stemmer.add(term.toCharArray(), term.length());
+			stemmer.stem();
+			if (!stemmer.toString().isEmpty()) {
+				stemmedContents.add(stemmer.toString());
+			}
+		}
+		s.close();
+
+		return stemmedContents;
+	}
+
 	public static List<String> tokenize(String input) throws IOException {
 		List<String> tempTokens = new ArrayList<String>();
 		TokenStream stream = analyze(input);
 		CharTermAttribute cattr = stream.addAttribute(CharTermAttribute.class);
 		while (stream.incrementToken()) {
+			if (cattr.toString().trim() == "google"
+					|| cattr.toString().trim() == "Google") {
+				System.out.println("Google Present!!");
+			}
 			String stemmedToken = cattr.toString().trim();
 			if (stemmedToken.matches("[a-zA-Z0-9']*")) {
 				stemmedToken = Stemmer.getStemmedWord(stemmedToken
@@ -52,6 +78,19 @@ class Utility {
 		Set<String> set = new HashSet<String>();
 		set.add("a");
 		set.add("b");
+		set.add("the");
+		set.add("an");
+		set.add("any");
+		set.add("1");
+		set.add("2");
+		set.add("3");
+		set.add("4");
+		set.add("5");
+		set.add("6");
+		set.add("7");
+		set.add("8");
+		set.add("9");
+		set.add("in");
 		Analyzer an = new EnglishAnalyzer(Version.LUCENE_30, set);
 		TokenStream stream = an
 				.tokenStream("FileName", new StringReader(input));
@@ -60,7 +99,7 @@ class Utility {
 	}
 
 	public static String extractText(String url) throws MalformedURLException,
-	IOException {
+			IOException {
 		String sourceUrlString = url;
 		if (sourceUrlString.indexOf(':') == -1)
 			sourceUrlString = "file:" + sourceUrlString;
@@ -160,7 +199,13 @@ class Utility {
 			binary += temp;
 		}
 		// System.out.println(binary);
-		return Integer.parseInt(binary, 2);
+		Integer returnValue = new Integer(0);
+		try {
+			returnValue = Integer.parseInt(binary, 2);
+		} catch (Exception e) {
+
+		}
+		return returnValue;
 	}
 
 	public static List<List<Integer>> createCompressedList(
@@ -236,8 +281,10 @@ class Utility {
 		}
 	}
 
-	// Given a term and doc Id, we need to find what index file we need to look into
-	public static String nextMachedDoc(String directory, String term, int docId, int bulk_doc_write_size) throws IOException {
+	// Given a term and doc Id, we need to find what index file we need to look
+	// into
+	public static String nextMachedDoc(String directory, String term,
+			int docId, int bulk_doc_write_size) throws IOException {
 		String prefix = getTermPrefix(term);
 
 		List<String> matchedDocs = getFileInDirectory(directory, prefix, "idx");
@@ -250,7 +297,8 @@ class Utility {
 		return "";
 	}
 
-	public static void saveFileNameToDocIdMap(String corpusDir, String filePath) throws IOException {
+	public static void saveFileNameToDocIdMap(String corpusDir, String filePath)
+			throws IOException {
 
 		PersistentStore _persistentStore = PersistentStore.getInstance();
 		int counter = 0;
@@ -260,9 +308,10 @@ class Utility {
 			_fileNameTodocumentIdMap.put(file, counter);
 			counter++;
 		}
-		//System.out.println("Map size: " + _fileNameTodocumentIdMap.size());
+		// System.out.println("Map size: " + _fileNameTodocumentIdMap.size());
 		try {
-			_persistentStore.saveFileMapForPageRankPrepare(filePath, _fileNameTodocumentIdMap);
+			_persistentStore.saveFileMapForPageRankPrepare(filePath,
+					_fileNameTodocumentIdMap);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -317,7 +366,7 @@ class Utility {
 		return my;
 	}
 
-	public static Map<String,Integer> returnUniqueSet(List<String> fileNames)
+	public static Map<String, Integer> returnUniqueSet(List<String> fileNames)
 			throws MalformedURLException, IOException {
 		Map<String,Integer> uniqueTermsMap = new HashMap<String,Integer>();
 		Set<String> stopWords = new HashSet<String>(Arrays.asList(new String[] { "a", "b", "c", 
@@ -326,9 +375,11 @@ class Utility {
 				 "as", "in", "on", "by", "it", "is", "or", "she", "he", "her", "him","had", "all",
 				 "at", "you", "all", "other" ,"that",
 				"for", "from", "1", "2" ,"3" ,"4", "5", "6","7","8","9","0" }));
+		
 		for (String file : fileNames) {
-			String extractedText = extractText("data/wiki/"+file);
+			String extractedText = extractText("data/wiki/" + file);
 			List<String> listOfStrings = tokenize(extractedText);
+
 			for(String s : listOfStrings){
 				boolean Exists = stopWords.contains(s);
 				if(!Exists){
